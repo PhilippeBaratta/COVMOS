@@ -1,0 +1,23 @@
+--> mandatory
+
+numpy
+sys
+os
+math
+glob
+time
+shutil
+socket
+configparser
+ast
+
+mpi4py
+multiprocessing
+pyfftw
+numba
+subprocess
+
+--> optional
+
+classy
+nbodykit
