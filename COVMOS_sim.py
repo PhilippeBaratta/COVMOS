@@ -1,11 +1,12 @@
 '''
-This code can be run if and only if the code COVMOS_ini.py has already been exectuted, associated to a .ini file.
+This code can be run if and only if the code COVMOS_ini.py has already been executed, associated to a .ini file.
+You can run it in mpi (or not) using 'mpiexec -f machinefile -n 10 python /renoir/baratta/COVMOS_public/COVMOS/COVMOS_sim.py setting_example'
 This code is divided into five parts: 
 - NETWORK INITIALISATION identifies the properties of the MPI network
-- PARAMETER INITIALISATION reads the input parameters set by the user, defined some constants and created output repertories 
-- LOADING/SHARING ARRAYS loads the files computed by COVMOS_ini.py and some relevant arrays for the pipeline. These arrays are shared through processes beloging to the same machine
-- COORD ASSIGNMENT DEFINITIONS is the parallelised function (using numba) allowing the coordinate assignment of particles
-- MAIN LOOP ON CATALOGUES stands for the main process : it generates first the Gaussian field, transforms it to obtain delta, Poissonizes it, assignes coordinates, generates the velocity field, assignes it to particles, saves and/or run NBodyKit to estimate Pk
+- PARAMETER INITIALISATION reads the input parameters set by the user, defines some constants and creates output repertories 
+- LOADING/SHARING ARRAYS loads the files computed by COVMOS_ini.py and some relevant arrays for the pipeline. These arrays are shared through processes belonging to the same machine
+- COORD ASSIGNMENT DEFINITIONS is the parallelised function allowing the coordinate assignment of particles
+- MAIN LOOP ON CATALOGUES stands for the main process: it generates first the Gaussian field, transforms it to obtain delta, Poissonizes it, assignes coordinates, generates the velocity field, assignes it to particles, saves and/or run NBodyKit to estimate the Pk multipoles
 '''
 
 
@@ -26,31 +27,10 @@ pyfftw.config.NUM_THREADS = cpu_count()
 #####################################################################################################################
 ########################################## PARAMETER INITIALISATION #################################################
 #####################################################################################################################
-from configparser import ConfigParser
-from sys import argv
+from initialization_funcs import *
+import sys
 
-config = ConfigParser()
-config.read('./inifiles/%s',str(argv[1]))
-
-N_sample            = config.getint('CATALOGUE_SETTINGS', 'N_sample')
-total_number_of_cat = config.getint('CATALOGUE_SETTINGS', 'total_number_of_cat')
-
-rho_0        = config.getfloat('CATALOGUE_SETTINGS', 'rho_0')
-L            = config.getfloat('CATALOGUE_SETTINGS', 'L')
-redshift     = config.getfloat('CATALOGUE_SETTINGS', 'redshift')
-targeted_rms = config.getfloat('TARGET_STATISTICS' , 'targeted_rms')
-alpha        = config.getfloat('TARGET_STATISTICS' , 'alpha')
-Omega_m      = config.getfloat('CATALOGUE_SETTINGS', 'Omega_m')
-
-fixed_Rdm_seed = config.getboolean('CATALOGUE_SETTINGS', 'fixed_Rdm_seed')
-velocity       = config.getboolean('OUTPUTS', 'velocity')
-save_catalogue = config.getboolean('OUTPUTS', 'save_catalogue')
-verbose        = config.getboolean('OUTPUTS', 'verbose')
-
-project_name           = config.get('CATALOGUE_SETTINGS', 'project_name')
-assign_scheme          = config.get('CATALOGUE_SETTINGS', 'assign_scheme')
-output_dir             = config.get('OUTPUTS', 'output_dir')
-estimate_Pk_multipoles = config.get('OUTPUTS', 'estimate_Pk_multipoles')
+Par = read_parameters(str(sys.argv[1]))
 
 if estimate_Pk_multipoles == 'stopandrun' : 
     detached_Pk_estimate = False ; savePkcat = True
@@ -62,7 +42,6 @@ a    = L/N_sample
 unit = -100 * Eofz(redshift,Omega_m)/(1+redshift)
 folder_saving = output_dir + (not output_dir[-1]=='/')*'/' + project_name + '/outputs/' 
 generate_and_clean_repertories_if_necessary(folder_saving,total_number_of_cat,project_name,save_catalogue,velocity,savePkcat,comm.Get_rank())
-
 
 #####################################################################################################################
 ############################################ LOADING/SHARING ARRAYS #################################################
@@ -83,7 +62,7 @@ if velocity:
     k_3D_2             = sharing_array_throw_MPI(grid_shape,intracomm,'float32')
     
     if intracomm.rank == 0:
-        kz[:,:,:],_,k_3D_2[:,:,:],_ = Fouriermodes(L,N_sample)
+        kz[:,:,:],k_3D_2[:,:,:] = Fouriermodes(L,N_sample,mode=2)
         byprod_pk_velocity[:,:,:]   = (file['arr_3']).astype(np.float32)
     
 grid_pos = sharing_array_throw_MPI((3,N_sample**3),intracomm,'float32')
