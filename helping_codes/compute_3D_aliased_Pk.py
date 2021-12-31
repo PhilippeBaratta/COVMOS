@@ -48,12 +48,12 @@ def load_user_data_catalogue(ref_cat_i):
     return x,y,z
 
 
-MAS            = 'CIC'
+MAS            = 'PCS'
 number_of_cats = 50
 L              = 1000. #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
-N_sample       = 512
+N_sample       = 1024
 ref_cat        = np.arange(50)+1 #each element of this array will pass as argument of load_user_data_catalogue()
-output_path    = '/datadec/cppm/baratta/COVMOS/COVMOS_public_test/Pk_z0_lcdm_cic_512' #path and filename of the output power spectrum
+output_path    = '/renoir/baratta/COVMOS_public/COVMOS/target_stat_example/Pk_z0_lcdm_cic_1024' #path and filename of the output power spectrum
 
 
 #####################################################################################################################

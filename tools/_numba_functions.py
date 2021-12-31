@@ -1,4 +1,4 @@
-from numba import jit, njit, prange
+from numba import njit, prange
 import numpy as np
 
 @njit(parallel=True,cache=True)
@@ -113,6 +113,9 @@ def exppara(array1,array2):
 
 @njit(parallel=True,cache=True)
 def filtering_operation(pktofilt_,type_filt_,norm_3D_,R_,index_):
+    '''
+    computes Pk exp(+-(k_3D*R)^i) using numba
+    '''
     array_ = np.zeros_like(pktofilt_)
     for i in prange(array_.shape[0]):
         for j in prange(array_.shape[1]):
