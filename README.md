@@ -90,7 +90,7 @@ When running on a single node COVMOS.py, a multiprocessing can be exploited than
 Moreover to make the execution faster, the codes can also be run through MPI to share the jobs though nodes.
 To do so you need to provide a machinefile: a text file that stores the IP addresses of all the nodes in the cluster network. ./machinefiles/machinefile_example1 gives an example of its structure.
 The command is the following:
-`mpiexec -f ./machinefiles/machinefile_example1 -n 10 python COVMOS.py both setting.ini`
+`mpiexec -f ./machinefiles/machinefile_example -n 32 python COVMOS.py both setting.ini`
 
 # References
 
