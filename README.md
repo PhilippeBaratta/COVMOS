@@ -17,19 +17,22 @@ Then a velocity field following a Gaussian prescription and a power spectrum set
 
 # Structure of the method
 
-COVMOS is splitted into two main codes :
+COVMOS is resumed in one main python code:
 
-**COVMOS_ini.py**
+**COVMOS.py**
 
-it generates the initilisation files that will be used for the simulation code COVMOS_sim.py. To be run, COVMOS_ini.py needs as argument a setting.ini file specifying the catalogue settings, requiered inputs and outputs (see .ini_files/setting_example.ini).
-It can be run from the terminal for example calling `python COVMOS_ini.py setting_example.ini` where the .ini file must be saved in the ini_files repertory
+To be run, COVMOS.py needs two key arguments:
 
-**COVMOS_sim.py**
+- the COVMOS mode that takes the values 'ini', 'sim' or 'both'
+- the path to a .ini file specifying the project settings, requiered inputs and outputs (see ./ini_files/setting_example.ini)
 
-it is the main code simulating boxes of particles (and associated velocities). It required the files produced by the previous code to be run. The command is similar:
-`python COVMOS_ini.py setting_example.ini`
+In the 'ini' mode, COVMOS generates the initilisation files that will be used for the simulating mode 'sim'. It can be run calling `python COVMOS.py ini path/to/the/inifile.ini` or in parallel (see section 'Parallel computation').
 
-Several statistical inputs are requiered by these two codes. They must be set by the user in a .ini file. If the user wants COVMOS to clone the user own data, several codes are provided to compute these statistical targets (see the next section).
+Once done, the 'sim' mode simulates boxes of particles and associated velocities. It can also be run calling `python COVMOS.py sim path/to/the/inifile.ini` or in parallel (see section 'Parallel computation').
+
+You can run the whole pipeline using the 'both' mode: `python COVMOS.py both path/to/the/inifile.ini`
+
+Several statistical inputs are requiered when using COVMOS. They must be set by the user in a .ini file. If the user wants COVMOS to clone its own data, several codes are provided to compute these statistical targets in the ./helping_codes folder (see the next section).
   
 
 # User inputs
@@ -39,7 +42,7 @@ The aim of this approximated universe simulation method is to target a small sam
 *The density power spectrum*
 
 an ascii file provided by the user. This power spectrum can follow a linear or non-linear prescription, and be associated to arbitrary cosmology and redshift. Moreover the refered objects associated to this power spectrum (dark matter particles, galaxies, etc) are also arbitrary. Since COVMOS needs to alias this power spectrum, it must be provided by the user deconvolved and unaliased.
-If the user does not provide this file, COVMOS can use [classy](https://github.com/lesgourg/class_public) to compute it. In this case the user must provide the cosmological parameters values associated to classy. Also compute_monop_using_NBK.py helps the user computing the monopole of the power spectrum from his own data, using the [NBodyKit](https://github.com/bccp/nbodykit) module.
+If the user does not provide this file, COVMOS can use [classy](https://github.com/lesgourg/class_public) to compute it. In this case the user must provide the cosmological parameters values associated to classy. Also ./helping_codes/compute_shell_average_monopole.py helps the user computing the monopole of the power spectrum from his own data, using the [NBodyKit](https://github.com/bccp/nbodykit) module. Finally, the user can provide a 3D target power spectrum in a .npy format, in this case convolved and aliased, see ./helping_codes/compute_3D_aliased_Pk.py to estimate it from data (this option offers the best results)
 
 *The theta-theta power spectrum*
 
@@ -47,47 +50,51 @@ an ascii file provided by the user. Two options are proposed here. Either the us
 
 *The probability distribution function of the contrast density field*
 
-an ascii file provided by the user containing the normalised density probability distribution function. The user can also ask COVMOS to estimate it directly from data provided by the user using compute_delta_PDF.py. Note that this PDF must be estimated on the same grid precision as the one of the simulated COVMOS box (same smoothing defined by the quantity L/N_sample, see setting_example.ini).
+an ascii file provided by the user containing the normalised density probability distribution function. The user can also ask COVMOS to estimate it directly from data provided by the user using ./helping_codes/compute_delta_PDF.py. Note that this PDF must be estimated on the same grid precision as the one of the simulated COVMOS box (same smoothing defined by the quantity L/N_sample, see ./ini_files/setting_example.ini).
 
 *The one-point velocity variance*
 
-This target statistical quantity must be set by the user. The code compute_velocity_rms.py helps the user to estimate it from his own data
+This target statistical quantity must be set by the user. The code ./helping_codes/compute_velocity_rms.py helps the user to estimate it from his own data
 
 *The alpha parameter*
 
-alpha is directly linked to the way COVMOS assignes peculiar velocities to particles. The relation velocity variance as a function of the local density field can be approximated by a power law, i.e. Σ^2(ρ) = βρ^α. Either alpha is provided by the user, or COVMOS can estimate it from data provided by the user (using compute_alpha.py).
+alpha is directly linked to the way COVMOS assignes peculiar velocities to particles. The relation velocity variance as a function of the local density field can be approximated by a power law, i.e. Σ^2(ρ) = βρ^α. Either alpha is provided by the user, or COVMOS can estimate it from data provided by the user (using ./helping_codes/compute_alpha.py).
 
 
 # COVMOS outputs
 
-from COVMOS_ini.py 
 
-This initialisation code provides numerous required files for COVMOS_sim.py to be run. This includes the power spectra for the Gaussian field (density and velocity), prior to their non-linear transformations into non-Gaussian fields (only for the density field).
-On request of the user, it can also provide in ascii files the predictions for the output power spectra and correlation functions. Indeed at small scales, mainly due to the grid precision and Poisson sampling, the input and outputs two-points statistics cannot be equal.
+*The two-point statistics prediction*
 
-from COVMOS_sim.py
+COVMOS is a method that needs several filterings. In this way the output power spectra of the produced catalogues are not exactly matching the targeted ones at small scales (depending on the grid precision). However the impact of these filterings on the output two-point statistics can be analyticaly computed at a better than the percent accuracy. The user can ask for the prediction of the output two-point correlation functions and power spectra
 
-The outputs or this code are the simulated boxes (particle positions and associated velocities). The catalogues are stored in binary files and can easily be loaded using
+*The catalogues*
+
+They are the simulated boxes (particle positions and associated velocities). The catalogues are stored in binary files and can easily be loaded using
 ```
-from COVMOS_func import *
-x,y,z,vx,vy,vz = loadcatalogue(filename,RSD=True)
+from tools.COVMOS_func import loadcatalogue
+x,y,z,vx,vy,vz = loadcatalogue(filename,velocity=True)
 ```
-Moreover, the multipoles (monopole, quadrupole, hexadecapole) of the power spectrum, both in comoving and in redshift spaces, can be asked by the user. In this case COVMOS will call [NBodyKit](https://github.com/bccp/nbodykit) for the estimation. 
 
+*The estimated power spectra*
+
+The multipoles (monopole, quadrupole, hexadecapole) of the power spectrum, both in real and redshift spaces, can be asked by the user. In this case COVMOS will call [NBodyKit](https://github.com/bccp/nbodykit) for the estimation.
+
+*The unbiased covariance*
+
+The COVMOS covariance of the multipoles of the power spectrum are slightly biased at small scales (k ~ 0.2h/Mpc). This bias can be removed applying the method presented in Baratta et al. 22 (in prep) and asked by the user in the .ini file
 
 # Parallel computation
 
-When running on a single node COVMOS_ini.py and COVMOS_sim.py, a multiprocessing can be exploited thanks to the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library by setting the environment variable OMP_NUM_THREADS to the wanted number of processes.
+When running on a single node COVMOS.py, a multiprocessing can be exploited thanks to the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library by setting the environment variable OMP_NUM_THREADS to the wanted number of processes.
 Moreover to make the execution faster, the codes can also be run through MPI to share the jobs though nodes.
-To do so you need to provide a machinefile: a text file that stores the IP addresses of all the nodes in the cluster network. .machinefiles/machinefile_example1 gives an example of its structure.
+To do so you need to provide a machinefile: a text file that stores the IP addresses of all the nodes in the cluster network. ./machinefiles/machinefile_example1 gives an example of its structure.
 The command is the following:
-`mpiexec -f ./machinefiles/machinefile_example1 -n 10 python COVMOS_ini.py setting.ini` here only acts on the aliasing part of the code, which is highly cpu and memory demanding.
-COVMOS_sim.py can also be parallelised using MPI. If more than one catalogue is asked, each node will independently generate catalogues.
-Note that if several processes are asked on the same machine (see ./machinefiles/machinefile_example2), some arrays are shared through the differents processes, so that the memory is optimised.
+`mpiexec -f ./machinefiles/machinefile_example1 -n 10 python COVMOS.py both setting.ini`
 
 # References
 
 If you are using COVMOS in a publication, please refer the code by citing the following paper:
-(baratta et al. 2021, in prep.)
+(baratta et al. 22, in prep.)
 Also if you used the [classy](https://github.com/lesgourg/class_public) or the [NBodyKit](https://github.com/bccp/nbodykit) modules, you should cite the original works.
 

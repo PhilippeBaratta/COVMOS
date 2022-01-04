@@ -1,7 +1,8 @@
 import numpy as np
 from ast import literal_eval
 from configparser import ConfigParser
-from os import path,makedirs
+from os import path,makedirs,remove
+from zipfile import ZipFile
 
 from tools._numba_functions import *
 from tools._shell_averaging import *
@@ -15,7 +16,7 @@ size = comm.Get_size()
 intracomm = from_globalcomm_to_intranode_comm()
 intrarank = intracomm.rank
     
-def read_parameters(inifile):
+def read_parameters(inifile,mode):
     '''
     read, test and complete all the parameters of the .ini file provided by the user
     It returns a dictionnary of the COVMOS parameters
@@ -36,7 +37,8 @@ def read_parameters(inifile):
     config = ConfigParser()
     config.read(inifile)
     Par = {}
-    
+    if config.getboolean('OUTPUTS', 'verbose') and rank == 0 and mode == 'ini': print('\033[1m'+'\nstarting the COVMOS initialisation procedure ...'+'\033[0m',flush=True)
+    if config.getboolean('OUTPUTS', 'verbose') and rank == 0 and mode == 'sim': print('\033[1m'+'\nstarting the COVMOS simulation procedure ...'+'\033[0m',flush=True)
     if config.getboolean('OUTPUTS', 'verbose') and rank == 0:
         print('\n________________________ READING/COMPUTING STATISTICAL INPUTS ________________________\n',flush=True)
         
@@ -69,7 +71,8 @@ def read_parameters(inifile):
         raise Exception('the N_sample parameter must be a power of 2 (ex. 256, 512, 1024 ...), please correct the ini file')
     if Par['N_sample'] <= 0 :
         raise Exception('the N_sample parameter must be > 0 and a power of 2 (ex. 256, 512, 1024 ...), please correct the ini file')
-        
+    Par['grid_shape'] = (Par['N_sample'],Par['N_sample'],Par['N_sample'])
+    
     try: Par['redshift'] = config.getfloat(var_type, 'redshift')
     except: raise Exception('the redshift parameter must be an integer or a float, please correct the ini file')
     if Par['redshift'] < 0: raise Exception('the redshift parameter must be >= 0, please correct the ini file')
@@ -93,7 +96,7 @@ def read_parameters(inifile):
     if Par['Pk_dd_file'] == '' or Par['Pk_dd_file'] == "''": Par['Pk_dd_file'] = ''
     if not path.exists(Par['Pk_dd_file']) and not Par['Pk_dd_file'] == '':
         raise Exception('Pk_dd_file not found:',Par['Pk_dd_file'])
-    if path.exists(Par['Pk_dd_file']):
+    if path.exists(Par['Pk_dd_file']) and mode == 'ini':
         if rank == 0:
             if (not Par['Pk_dd_file'][-4:] == '.npy'):
                 try: 
@@ -101,14 +104,16 @@ def read_parameters(inifile):
                     if kk[0] > 2*np.pi/Par['L'] : raise Exception('the kmin in',Par['Pk_dd_file'],'is too high (> 2pi/L), you should extrapolate it down to lower modes')
                 except: raise Exception('the ascii file associated to Pk_dd_file is not composed of two columns (k in h/Mpc and Pk in [Mpc/h]^3)')
             else:
-                npy_file = np.load(Par['Pk_dd_file'])
-                if not npy_file.shape == (Par['N_sample'],Par['N_sample'],Par['N_sample']):
+                with open(Par['Pk_dd_file'], 'rb') as f:
+                    major, minor = np.lib.format.read_magic(f)
+                    shape, fortran, dtype = np.lib.format.read_array_header_1_0(f)
+                if not shape == Par['grid_shape']:
                     raise Exception('the provided .npy file for Pk_dd_file is associated to a numpy array of shape different of (%i,%i,%i), please provide a different file, or change the N_sample parameter to %i'%(Par['N_sample'],Par['N_sample'],Par['N_sample'],npy_file.shape[0]))
     
     Par['PDF_d_file'] = config.get(var_type, 'PDF_d_file')
     if not path.exists(Par['PDF_d_file']) and not Par['PDF_d_file'] == 'gaussian' :
         raise Exception('PDF_d_file not found:',Par['PDF_d_file'], 'if you want a gaussian PDF, type gaussian')
-    if path.exists(Par['PDF_d_file']):
+    if path.exists(Par['PDF_d_file']) and mode == 'ini':
         if rank == 0:
             try: _,_ = np.loadtxt(Par['PDF_d_file'],unpack=1)
             except: raise Exception('the ascii file associated to PDF_d_file is not composed of two columns (delta and PDF(delta)')
@@ -139,7 +144,7 @@ def read_parameters(inifile):
         if Par['Pk_tt_file'] == '' or Par['Pk_tt_file'] == "''": Par['Pk_tt_file'] = ''
         if not path.exists(Par['Pk_tt_file']) and not Par['Pk_tt_file'] == '':
             raise Exception('Pk_tt_file not found:',Par['Pk_tt_file'])
-        if path.exists(Par['Pk_tt_file']):
+        if path.exists(Par['Pk_tt_file']) and mode == 'ini':
             if rank == 0:
                 try: 
                     kk,_ = np.loadtxt(Par['Pk_tt_file'],unpack=1)
@@ -176,36 +181,73 @@ def read_parameters(inifile):
     if not (Par['estimate_Pk_multipoles'] == 'stopandrun' or Par['estimate_Pk_multipoles'] == 'detached' or Par['estimate_Pk_multipoles'] == False):
         raise Exception('the estimate_Pk_multipoles parameter must be set to stopandrun or detached or False')
     
-    Par['save_catalogue'] = config.getboolean(var_type, 'save_catalogue')
-    Par['verbose']        = config.getboolean(var_type, 'verbose')
-    Par['debug']          = config.getboolean(var_type, 'debug')
+    Par['save_catalogue']     = config.getboolean(var_type, 'save_catalogue')
+    Par['verbose']            = config.getboolean(var_type, 'verbose')
+    Par['debug']              = config.getboolean(var_type, 'debug')
+    Par['compute_covariance'] = config.getboolean(var_type, 'compute_covariance')
+    
+    if Par['compute_covariance'] is True and Par['estimate_Pk_multipoles'] is False:
+        raise Exception('you asked COVMOS to compute the unbiased covariance but estimate_Pk_multipoles = False, please modify the input parameters')
     
     if Par['aliasing_order'] == 'Default' and not Par['Pk_dd_file'][-4:] == '.npy': Par['aliasing_order'] = 2
     
     if Par['project_name'] == '' or Par['project_name'] == "''":
-        Par['project_name'] = 'COVMOS_' + 'Ns' + str(Par['N_sample']) + '_L' + str(Par['L']) + '_z' + str(Par['redshift']) + '_rho' + str(Par['rho_0']) + '_Om' + str(Par['Omega_m']) + '_' + Par['assign_scheme'] + '_scheme' + (not Par['Pk_dd_file'][-4:] == '.npy') * ('_aliasOrd' + str(Par['aliasing_order'])) + Par['velocity'] * ('_alpha' + str(Par['alpha']) + '_Vrms' + str(Par['targeted_rms'])) + Par['fixed_Rdm_seed'] * '_fixed_Rdm_seed'
+        Par['project_name'] = 'COVMOS_' + 'Ns' + str(Par['N_sample']) + '_L' + str(Par['L']) + '_z' + str(Par['redshift']) + '_rho' + str(Par['rho_0']) + '_Om' + str(Par['Omega_m']) + '_' + Par['assign_scheme'] + '_scheme' + (not Par['Pk_dd_file'][-4:] == '.npy') * ('_aliasOrd' + str(Par['aliasing_order'])) + Par['velocity'] * ('_alpha' + str(Par['alpha']) + '_Vrms' + str(Par['targeted_rms'])) + Par['fixed_Rdm_seed'] * '_fixed_Rdm_seed' + (Par['PDF_d_file'] == 'gaussian') * '_gaussianPDF'
     
     Par['output_dir_project'] = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + Par['project_name']
+    Par['output_ini_file'] = Par['output_dir_project'] + '/ini_files/ini_file'
+    
+    if mode == 'sim':
+        Par['a'] = Par['L']/Par['N_sample']
+        def Eofz(z,Omega_m): 
+            return np.sqrt(Omega_m*(1+z)**3 + (1 - Omega_m))
+        Par['unit'] = -100 * Eofz(Par['redshift'],Par['Omega_m'])/(1+Par['redshift'])
+        
+        Par['folder_saving'] = Par['output_dir_project'] + '/outputs_sim/' 
+        Par['folder_job']    = Par['folder_saving'] + '_job/'
+        Par['folder_beta']   = Par['folder_saving'] + '_beta/'
+        Par['folder_sim']    = Par['folder_saving'] + 'COVMOS_catalogues/'
+        Par['file_sim']      = Par['folder_sim']    + 'COVMOS_catalogue'
+        
+        Par['folder_Pk']     = Par['folder_saving'] + 'Pk/'
+        Par['folder_Pk_RSD'] = Par['folder_saving'] + 'Pk_RSD/'
+        Par['folder_cov']    = Par['folder_saving'] + 'Covariance/'
+        
+        Par['file_Pk']     = Par['folder_Pk']     + 'COVMOS_catalogue.NBodyKit_k_nbr_Pk_quad_hexa'
+        Par['file_Pk_RSD'] = Par['folder_Pk_RSD'] + 'COVMOS_catalogue.NBodyKit_RSD_k_nbr_Pk_quad_hexa'
+        
+        if not path.exists(Par['output_ini_file']+'.npz') and rank == 0:
+            raise Exception("COVMOS doesn't find the input files necessary to run COVMOS.py in mode 'sim' (the Gaussian to non-Gaussian mapping function + the Gaussian 3D power spectrum for the density + velocity fields). Please run COVMOS.py in 'ini' mode before running COVMOS.py in 'sim' mode using the same .ini file, see README.md and inifiles/setting_example.ini for more details")
+        comm.Barrier()
+        with ZipFile(Par['output_ini_file']+'.npz') as archive:
+            npy = archive.open('arr_2.npy')
+            version = np.lib.format.read_magic(npy)
+            shape, fortran, dtype = np.lib.format._read_array_header(npy, version)
+            if not shape == Par['grid_shape']:
+                raise Exception('the ini file %s.npz is of shape %s incompatible with the asked shape (%i,%i,%i). Please run COVMOS_ini.py again'%(Par['output_ini_file'],shape,Par['N_sample'],Par['N_sample'],Par['N_sample']))
+                                
+        
     
     if Par['verbose'] and rank == 0 : print('the ini file has been correctly read',flush=True)
     
     comm.Barrier()
     return Par
 
-def generate_output_repertories(Par):
+def generate_output_repertories(Par,mode):
     '''
-    generate the diverse output repertories and logfile from COVMOS_ini.py
+    generate the diverse output repertories and logfile from COVMOS_ini.py for mode = 'ini'
+    generate and clean the output repertory for mode = 'sim'
     '''
-    if rank == 0:
+    if rank == 0 and mode == 'ini':
         if Par['verbose']: print('generating the various output repertories in', Par['output_dir_project'],flush=True)
         makedirs(Par['output_dir_project'],exist_ok=True)
         makedirs(Par['output_dir_project'] + '/ini_files',exist_ok=True)
         if Par['compute_Pk_prediction'] or Par['compute_2pcf_prediction']: makedirs(Par['output_dir_project'] + '/TwoPointStat_predictions',exist_ok=True)
         if Par['compute_Pk_prediction'] or Par['debug']:
-            shell_avg_file = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + 'shellaveraging_trick_arrays_Pk_L%s_Ns%i'%(L,Ns)
+            shell_avg_file = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + 'shellaveraging_trick_arrays_Pk_L%s_Ns%i'%(Par['L'],Par['N_sample'])
             makedirs(shell_avg_file,exist_ok=True)
         if Par['compute_2pcf_prediction'] or Par['debug']:
-            shell_avg_file_2pcf = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + 'shellaveraging_trick_arrays_2PCF_L%s_Ns%i'%(L,Ns)
+            shell_avg_file_2pcf = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + 'shellaveraging_trick_arrays_2PCF_L%s_Ns%i'%(Par['L'],Par['N_sample'])
             makedirs(shell_avg_file_2pcf,exist_ok=True)
         if Par['debug']: makedirs(Par['output_dir_project'] + '/debug_files',exist_ok=True)
             
@@ -214,10 +256,65 @@ def generate_output_repertories(Par):
         fo  = open(out, "w")
         for k, v in Par.items(): fo.write(str(k) + '=' + str(v) + '\n')
         fo.close()
+    
+    if rank == 0 and mode == 'sim':
+        if Par['verbose']: print('generating/cleaning the various output repertories in', Par['folder_saving'],flush=True)
+        makedirs(Par['folder_saving'],exist_ok=True)
+        makedirs(Par['folder_job']   ,exist_ok=True)
+        makedirs(Par['folder_sim']   ,exist_ok=True)
+        
+        if Par['velocity']:
+            makedirs(Par['folder_beta'],exist_ok=True)
+        
+        if Par['estimate_Pk_multipoles'] is not False:
+            makedirs(Par['folder_Pk'],exist_ok=True)
+            if Par['velocity']: 
+                makedirs(Par['folder_Pk_RSD'],exist_ok=True)
+            if Par['compute_covariance']:
+                makedirs(Par['folder_cov'],exist_ok=True)
+        
+        for i in range(Par['total_number_of_cat']):
+            job_file  = Par['folder_job']+'_%i'%(i+1)
+            data_file = Par['file_sim']+'_%i.data'%(i+1)
+            Pk_file   = Par['file_Pk']     +'_%i'%(i+1)
+            PkRSD_file= Par['file_Pk_RSD'] +'_%i'%(i+1)
+                            
+            if Par['save_catalogue']:
+                if path.exists(job_file) and not path.exists(data_file): remove(job_file)
+                if path.exists(data_file) and not path.exists(job_file): np.savetxt(job_file,[1])
+                    
+            if Par['save_catalogue'] and Par['estimate_Pk_multipoles'] is not False:
+                if not Par['velocity']:
+                    if path.exists(job_file) and not path.exists(Pk_file):
+                        remove(job_file)
+                        if path.exists(data_file): remove(data_file)
+                    if path.exists(Pk_file) and not path.exists(job_file):
+                        np.savetxt(job_file,[1])
+                if Par['velocity']:
+                    if path.exists(job_file) and not path.exists(PkRSD_file):
+                        remove(job_file)
+                        if path.exists(data_file): remove(data_file)
+                    if path.exists(PkRSD_file) and not path.exists(job_file): np.savetxt(job_file,[1])
+
+            if not Par['save_catalogue'] and Par['estimate_Pk_multipoles'] is not False:
+                if not Par['velocity']:
+                    if path.exists(job_file) and not path.exists(Pk_file):
+                        remove(job_file)
+                        if path.exists(data_file): remove(data_file)
+                    if path.exists(Pk_file) and not path.exists(job_file):
+                        np.savetxt(job_file,[1])
+                    if path.exists(job_file) and path.exists(Pk_file) and path.exists(data_file):
+                        remove(data_file)
+                if Par['velocity']:
+                    if path.exists(job_file) and not path.exists(PkRSD_file):
+                        remove(job_file)
+                        if path.exists(data_file): remove(data_file)
+                    if path.exists(PkRSD_file) and not path.exists(job_file): np.savetxt(job_file,[1])
+                    if path.exists(job_file) and path.exists(PkRSD_file) and path.exists(data_file): remove(data_file)
     comm.Barrier()
     return
 
-def loading_ini_files(Par):
+def loading_ini_files(Par,mode):
     '''
     loading or computing the density and velocities files, referred as inputs by the user
     '''
@@ -246,11 +343,11 @@ def loading_ini_files(Par):
         '''
         from classy import Class    
         cosmo = Class()
-        Pk_classy  = sharing_array_throw_MPI((2,1000),comm,'float64')
-        sigma8m    = sharing_array_throw_MPI((1,),comm,'float64')
-        if rank == 0:
+        Pk_classy  = sharing_array_throw_MPI((2,1000),intracomm,'float64')
+        sigma8m    = sharing_array_throw_MPI((1,),intracomm,'float64')
+        if intrarank == 0:
             if ('non linear' in Par['classy_dict']) and prescription == 'linear': del Par['classy_dict']['non linear']
-            if Par['verbose']: 
+            if Par['verbose'] and rank ==0: 
                 if prescription == 'Default': print('computing the class power spectrum (for the density field) following the dict provided by the user :', Par['classy_dict'],flush=True)
                 else: print('computing the class power spectrum following with a linear prescription for the velocity field :', Par['classy_dict'],flush=True)
             cosmo.set(Par['classy_dict'])
@@ -291,37 +388,76 @@ def loading_ini_files(Par):
         Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
         return np.vstack((Pk_1D_dd_lin[0],Pk_tt_theo1d))
     
-    density_field  = {} ; velocity_field = {}
+    if mode == 'ini':                         
+        density_field  = {} ; velocity_field = {}
+
+        if Par['PDF_d_file'] == 'gaussian': density_field['PDF_delta'] = 'gaussian'
+        else:                               density_field['PDF_delta'] = np.transpose(np.loadtxt(Par['PDF_d_file']))
+
+        if Par['Pk_dd_file'][-4:] == '.npy':
+            if rank == 0: density_field['Pk_3D_dd_alias'] = np.load(Par['Pk_dd_file'])
+        else:
+            if Par['Pk_dd_file'] == '': density_field['Pk_1D_dd'],_ = classy_compute_Pk(Par)
+            else :
+                k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
+                if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
+                density_field['Pk_1D_dd'] = np.vstack((k_dd_,Pk_1D_dd_))
+            if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_dd',np.transpose(density_field['Pk_1D_dd']))
+
+        if Par['velocity']:
+            if Par['Pk_tt_file'] == '':
+                Pk_1D_dd_lin,sigma8m       = classy_compute_Pk(Par,prescription = 'linear')
+                velocity_field['Pk_1D_tt'] = Bel_et_al_fitting_functions(sigma8m,Pk_1D_dd_lin,Par)
+            else: 
+                k_tt_,Pk_1D_tt_ = np.loadtxt(Par['Pk_tt_file'],unpack=1)
+                if k_dd_[-1]<10: k_tt_,Pk_1D_tt_ = extrap_k_loglin(10,k_tt_,Pk_1D_tt_,2)
+                velocity_field['Pk_1D_tt'] = np.vstack((k_tt_,Pk_1D_tt_))
+            if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_tt',np.transpose(velocity_field['Pk_1D_tt']))
+
+        if Par['verbose'] and rank == 0 : print('the statistical targets have been successfully read/computed\n',flush=True)
+
+        comm.Barrier()
+        return density_field,velocity_field
     
-    if Par['PDF_d_file'] == 'gaussian': density_field['PDF_delta'] = 'gaussian'
-    else:                               density_field['PDF_delta'] = np.transpose(np.loadtxt(Par['PDF_d_file']))
-    
-    if Par['Pk_dd_file'][-4:] == '.npy':
-        if rank == 0: density_field['Pk_3D_dd_alias'] = np.load(Par['Pk_dd_file'])
-    else:
-        if Par['Pk_dd_file'] == '': density_field['Pk_1D_dd'],_ = classy_compute_Pk(Par)
-        else :
-            k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
-            if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
-            density_field['Pk_1D_dd'] = np.vstack((k_dd_,Pk_1D_dd_))
-        if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_dd',np.transpose(density_field['Pk_1D_dd']))
-    
-    if Par['velocity']:
-        if Par['Pk_tt_file'] == '':
-            Pk_1D_dd_lin,sigma8m       = classy_compute_Pk(Par,prescription = 'linear')
-            velocity_field['Pk_1D_tt'] = Bel_et_al_fitting_functions(sigma8m,Pk_1D_dd_lin,Par)
-        else: 
-            k_tt_,Pk_1D_tt_ = np.loadtxt(Par['Pk_tt_file'],unpack=1)
-            if k_dd_[-1]<10: k_tt_,Pk_1D_tt_ = extrap_k_loglin(10,k_tt_,Pk_1D_tt_,2)
-            velocity_field['Pk_1D_tt'] = np.vstack((k_tt_,Pk_1D_tt_))
-        if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_tt',np.transpose(velocity_field['Pk_1D_tt']))
+    if mode == 'sim':
+        Ary = {}
+        if Par['verbose'] and rank == 0 : print('loading the Gaussian power spectra produced by COVMOS_ini.py in ',Par['output_ini_file']+'.npz',flush=True)
+        file = np.load(Par['output_ini_file']+'.npz')
+        
+        if not Par['PDF_d_file'] == 'gaussian':
+            Ary['x_nu']    = file['arr_0']
+            Ary['L_of_nu'] = file['arr_1']
+        
+        Ary['byprod_pk_density']  = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float64')
+        if intracomm.rank == 0: Ary['byprod_pk_density'][:,:,:] = file['arr_2']
+
+        if Par['velocity']: 
+            Ary['byprod_pk_velocity'] = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
+            Ary['kz']                 = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
+            Ary['k_3D_2']             = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
+
+            if intracomm.rank == 0:
+                Ns = Par['N_sample']
+                k_F = 2*np.pi/Par['L']
+                ref     = np.arange(Ns,dtype=np.int16)
+                norm_1d = (np.concatenate((ref[ref<Ns/2] *k_F,(ref[ref >= Ns/2] - Ns)*k_F))).astype(np.float32)
+                Ary['kz'][:,:,:]     = np.array([[norm_1d,]*Ns]*Ns,dtype=np.float32)
+                Ary['k_3D_2'][:,:,:] = fast_sqrtnorm(Ary['kz'].transpose(2,1,0),Ary['kz'].transpose(0,2,1),Ary['kz'])
+                Ary['byprod_pk_velocity'][:,:,:] = file['arr_3']
+        
+        if Par['verbose'] and rank == 0 : print('computing and storing grid features',flush=True)
+        Ary['grid_pos'] = sharing_array_throw_MPI((3,Par['N_sample']**3),intracomm,'float32')
+        if intracomm.rank == 0: Ary['grid_pos'][:,:] = grid_positions(Par)
+        if Par['assign_scheme'] == 'trilinear': 
+            Ary['vertex'] = sharing_array_throw_MPI((3,Par['N_sample']**3),intracomm,'int16')
+            if intracomm.rank == 0: Ary['vertex'][:,:] = compute_vertex_indices(Par)
+        else: Ary['vertex'] = np.array([],dtype=np.int16)
             
-    if Par['verbose'] and rank == 0 : print('the statistical targets have been successfully read/computed\n',flush=True)
+        return Ary
+        
+                                
+                                
     
-    comm.Barrier()
-    return density_field,velocity_field
-
-
 def Fouriermodes(Par,mode=0):
     '''
     setting the Fourier modes on the grid and computing the shell-averaged modes (if compute_Pk_prediction == True or debug == True)
@@ -386,7 +522,6 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map):
     Ns = Par['N_sample'] ; k_F = 2.*np.pi/Par['L']
     
     if rank == 0:
-        output_file = Par['output_dir_project'] + '/ini_files/ini_file'
         
         scalar_density  = Ns**3/np.sum(density_field['Pk_nu'])
         scalar_velocity = Ns**3 * k_F**3
@@ -397,7 +532,31 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map):
             byprod_pk_density = sqrt_of_array_times_scalar(density_field['Pk_nu'],scalar_density)
             byprod_pk_velocity = np.array([0.])
         
-        if Par['verbose']: print('saving the initilisation files used by COVMOS_sim.py in',output_file,flush=True)
+        if Par['verbose']: print('saving the initilisation files used by COVMOS_sim.py in',Par['output_ini_file'],flush=True)
             
-        np.savez(output_file,PDF_map['x_nu'],PDF_map['NL_map'],byprod_pk_density,byprod_pk_velocity.astype(np.float32)) 
+        np.savez(Par['output_ini_file'],PDF_map['x_nu'],PDF_map['NL_map'],byprod_pk_density,byprod_pk_velocity.astype(np.float32)) 
     return
+
+def grid_positions(Par):
+    '''
+    stores the position of each grid node in Mpc/h
+    '''
+    grid_pos = np.zeros((3,Par['N_sample']**3),dtype = 'float32')
+    zzz    = np.zeros(Par['grid_shape'],dtype = 'float32')
+    zzz[:] = np.linspace(-Par['L']/2.,Par['L']/2.,Par['N_sample']+1)[:-1]
+    grid_pos[0,:] = zzz.transpose(2,1,0).flatten()
+    grid_pos[1,:] = zzz.transpose(0,2,1).flatten()
+    grid_pos[2,:] = zzz.flatten()
+    return grid_pos
+
+def compute_vertex_indices(Par):
+    '''
+    stores the flatenned 3D indices of grid nodes
+    '''
+    vertex      = np.zeros((3,Par['N_sample']**3),dtype='int16')
+    kkk         = np.zeros(Par['grid_shape'],dtype='int16')
+    kkk[:]      = np.arange(0,Par['N_sample'])
+    vertex[0,:] = kkk.transpose(2,1,0).flatten()
+    vertex[1,:] = kkk.transpose(0,2,1).flatten()
+    vertex[2,:] = kkk.flatten()
+    return vertex

@@ -50,12 +50,12 @@ def load_user_data_catalogue(ref_cat_i):
     return x,y,z
 
 
-MAS            = 'CIC'
+MAS            = 'PCS'
 number_of_cats = 50
 L              = 1000. #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
 N_sample       = 512
 ref_cat        = np.arange(50)+1 #each element of this array will pass as argument of load_user_data_catalogue()
-output_path    = '/datadec/cppm/baratta/COVMOS/COVMOS_public_test/PDF_z0_lcdm_cic_512' #path and filename of the output power spectrum
+output_path    = '/datadec/cppm/baratta/COVMOS/COVMOS_public_test/PDF_z0_lcdm_pcs_512' #path and filename of the output power spectrum
 
 #####################################################################################################################
 ############################################# SPLITTING JOBS IF MPI #################################################
@@ -76,9 +76,7 @@ from nbodykit.source.catalog import ArrayCatalog
 import os
 import shutil
 
-if rank == 0:
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+if rank == 0: os.makedirs(output_path,exist_ok=True)
 
 for ref_cat_i in ref_cat_rank:
     

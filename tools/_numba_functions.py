@@ -60,6 +60,18 @@ def fast_norm(k1,k2,k3):
             for k in prange(array_.shape[2]):
                 array_[i,j,k] = np.sqrt(k1[i,j,k]**2 + k2[i,j,k]**2 + k3[i,j,k]**2)
     return array_
+
+@njit(parallel=True,cache=True)
+def fast_sqrtnorm(k1,k2,k3):
+    '''
+    computes the grid norm of 3 numpy arrays using numba
+    '''
+    array_ = np.zeros_like(k1)
+    for i in prange(array_.shape[0]):
+        for j in prange(array_.shape[1]):
+            for k in prange(array_.shape[2]):
+                array_[i,j,k] = k1[i,j,k]**2 + k2[i,j,k]**2 + k3[i,j,k]**2
+    return array_
     
 @njit(parallel=True,cache=True)
 def sqrt_of_array_times_scalar(array,scalar):
@@ -122,3 +134,44 @@ def filtering_operation(pktofilt_,type_filt_,norm_3D_,R_,index_):
             for k in prange(array_.shape[2]):
                 array_[i,j,k] = pktofilt_[i,j,k] * np.exp(type_filt_*(norm_3D_[i,j,k]*R_)**index_)
     return array_
+
+@njit(parallel = True, cache=True)
+def inverse_div_theta(complex1,byprod_pk_velocity,k_3D_2):
+    array = np.zeros_like(complex1)
+    sampling = array.shape[0]
+    for i in prange(sampling):
+        for j in prange(sampling):
+            for k in prange(sampling):
+                if k_3D_2[i,j,k] != 0:
+                    array[i,j,k] = -1j*(complex1[i,j,k]*byprod_pk_velocity[i,j,k])/k_3D_2[i,j,k]
+    return array  
+
+@njit(parallel=True,cache=True)
+def from_delta_to_rho_times_a3(delta,rho_0a3):
+    array_ = np.zeros_like(delta)
+    for i in prange(array_.shape[0]):
+        for j in prange(array_.shape[1]):
+            for k in prange(array_.shape[2]):
+                    array_[i,j,k] = (delta[i,j,k]+1)*rho_0a3
+    return array_
+
+@njit(parallel=True, cache=True)
+def mean_delta_times_a3(delta,a3,rho_0):
+    rho_       = np.zeros_like(delta)
+    mean_grid_ = np.zeros_like(delta)
+    sampling = mean_grid_.shape[0]
+    
+    for i in prange(sampling):
+        for j in prange(sampling):
+            for k in prange(sampling):
+                rho_[i,j,k] = (delta[i,j,k]+1)*rho_0
+                
+    for i in prange(sampling):
+        for j in prange(sampling):
+            for k in prange(sampling):
+                ip1 = (i != (sampling-1)) * (i+1)
+                jp1 = (j != (sampling-1)) * (j+1)
+                kp1 = (k != (sampling-1)) * (k+1)
+                
+                mean_grid_[i,j,k] = a3 *(rho_[i,j,k] + rho_[ip1,j,k] + rho_[i,jp1,k] + rho_[i,j,kp1] + rho_[ip1,jp1,k] + rho_[ip1,j,kp1] + rho_[i,jp1,kp1] + rho_[ip1,jp1,kp1]) / 8
+    return rho_,mean_grid_
