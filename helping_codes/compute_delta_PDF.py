@@ -28,34 +28,16 @@ def load_user_data_catalogue(ref_cat_i):
     This function must be written by the user in order to load his catalogue(s). If the code is run in mpi, several catalogues (only defined by different initial condition, but same parameters) can be treated in parallel. In this case, each MPI rank must return one catalogue.
     x,y,z must all be provided in Mpc/h and x,y,z must all belong to [0,L]
     '''
-    from scipy.io.idl import readsav
-    
-    N_DEMNUni = 1024**3
-    
-    icovstr = '0'*(ref_cat_i<10) + str(ref_cat_i)
-    
-    x=np.zeros(N_DEMNUni)
-    y=np.zeros(N_DEMNUni)
-    z=np.zeros(N_DEMNUni)
-    
-    ref_dep = 0
-    for slices in range(512):
-        slice_xyz = readsav('/datadec/cpt/jbel/IDL_CATALOGUES/demnuniicov%s_0z_%s.data'%(icovstr,slices),verbose=0)
-        ref_fin   = len(slice_xyz.xyz[:,0]) + ref_dep
-        x[ref_dep:ref_fin]  = slice_xyz.xyz[:,0] 
-        y[ref_dep:ref_fin]  = slice_xyz.xyz[:,1] 
-        z[ref_dep:ref_fin]  = slice_xyz.xyz[:,2] 
-        ref_dep = ref_fin*1
         
     return x,y,z
 
 
 MAS            = 'PCS'
-number_of_cats = 50
-L              = 1000. #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
-N_sample       = 512
-ref_cat        = np.arange(50)+1 #each element of this array will pass as argument of load_user_data_catalogue()
-output_path    = '/datadec/cppm/baratta/COVMOS/COVMOS_public_test/PDF_z0_lcdm_pcs_512' #path and filename of the output power spectrum
+number_of_cats = 
+L              =  #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
+N_sample       = 
+ref_cat        =  #each element of this array will pass as argument of load_user_data_catalogue()
+output_path    =  #path and filename of the output power spectrum
 
 #####################################################################################################################
 ############################################# SPLITTING JOBS IF MPI #################################################
