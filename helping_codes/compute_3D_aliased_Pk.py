@@ -2,14 +2,15 @@
 This code helps the user to estimate on his own data the 3D power spectrum, naturally aliased thanks to FFT. Note that this method is better than artificially aliasing a 1D power spectrum since all alias contribution are naturraly added to the true signal. First the user has to write the function load_user_data_catalogue() (see below) used by this code to load positions of user data. Then the code assign particles on the mesh using the NbodyKit module. The obtained delta grid is transformed in Fourier space using FFT and the 3D power spectrum is computed.
 Note that this code can be run in MPI if several input catalogues are provided by the user. In this case the resulting 3D power spectrum is the averaged one.
 
-inputs : - a function written by the user to load his data
+inputs : - a function written by the user to load his data (particle positions only)
          - number_of_cats, the number of catalogues to be loaded
          - L, the size of the cubical box
          - N_sample, the sampling parameter (L/N_sample (the grid precision) must be similar to the one set in the setting.ini file)
-         - MAS is the type of mass assignment scheme used to assign particles on the mesh, like 'CIC', 'TSC', 'PCS'... see NBodyKit documentation for 
-           other kinds of MAS. Note that the MAS parameter must be similar to the one given in compute_delta_PDF.py
+         - MAS is the type of mass assignment scheme used to assign particles on the mesh, like 'NEAREST', 'CIC', 'TSC', 'PCS'... see NBodyKit
+           documentation for other kinds of MAS. Note that the MAS parameter must be similar to the one given in compute_delta_PDF.py
+         - ref_cat is an array consisting of labels distinguishing the different catalogues, ex: [1,2,3,4,5]
          - output_path is the path and filename of the output power spectrum
-output : - the (averaged) 3D aliased power spectrum in a .npy file
+output : - the (averaged or not) 3D aliased power spectrum in a .npy file
 '''
 
 
@@ -27,15 +28,15 @@ def load_user_data_catalogue(ref_cat_i):
     x,y,z must all be provided in Mpc/h and x,y,z must all belong to [0,L]
     '''
        
-    return x,y,z
+    return x.astype(np.float64),y.astype(np.float64),z.astype(np.float64)
 
 
-MAS            = 'PCS'
 number_of_cats = 
-L              =  #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
+L              =    #in Mpc/h. Once again L/N_sample (the grid precision) must be similar to the one set in the setting.ini file
 N_sample       = 
-ref_cat        =  #each element of this array will pass as argument of load_user_data_catalogue()
-output_path    =  #path and filename of the output power spectrum
+MAS            = 
+ref_cat        = [] #each element of this array is associated to a catalogue and will be passed as input of load_user_data_catalogue()
+output_path    =    #path and filename of the output power spectrum
 
 
 #####################################################################################################################
