@@ -1,7 +1,8 @@
 '''
-This code allows the production of the files necessary to run the code COVMOS_sim.py. It must be associated to a .ini file (see setting_example.ini).
-You can run it in mpi (or not) using for instance 'mpiexec -f machinefile -n 10 python /renoir/baratta/COVMOS_public/COVMOS/COVMOS_ini.py setting_example'
+This file is the main code of COVMOS. It must be associated to a .ini file (see setting_example.ini) and a running mode : ini, sim, or both.
+You can run it using mpi (or not) calling for instance 'mpiexec -f machinefile -n 10 python COVMOS.py both path/to/setting.ini'
 '''
+
 from tools._initialisation_setting import *
 
 from sys import argv
@@ -12,8 +13,6 @@ try:
 except: 
     raise Exception("please run in the following way: 'python COVMOS.py mode inifile' with mode in ['ini','sim','both'] and inifile being the .ini file associated to your project")
     
-
-
 if COVMOS_type in ['ini','both']:
     
     from tools._Pknu_pipeline import *
