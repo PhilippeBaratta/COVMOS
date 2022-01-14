@@ -223,7 +223,7 @@ def read_parameters(inifile,mode):
             version = np.lib.format.read_magic(npy)
             shape, fortran, dtype = np.lib.format._read_array_header(npy, version)
             if not shape == Par['grid_shape']:
-                raise Exception('the ini file %s.npz is of shape %s incompatible with the asked shape (%i,%i,%i). Please run COVMOS_ini.py again'%(Par['output_ini_file'],shape,Par['N_sample'],Par['N_sample'],Par['N_sample']))
+                raise Exception('the ini file %s.npz is of shape %s incompatible with the asked shape (%i,%i,%i). Please run COVMOS.py in ini mode again'%(Par['output_ini_file'],shape,Par['N_sample'],Par['N_sample'],Par['N_sample']))
                                 
         
     
@@ -234,7 +234,7 @@ def read_parameters(inifile,mode):
 
 def generate_output_repertories(Par,mode):
     '''
-    generate the diverse output repertories and logfile from COVMOS_ini.py for mode = 'ini'
+    generate the diverse output repertories and logfile from COVMOS.py for mode = 'ini'
     generate and clean the output repertory for mode = 'sim'
     '''
     if rank == 0 and mode == 'ini':
@@ -422,7 +422,7 @@ def loading_ini_files(Par,mode):
     
     if mode == 'sim':
         Ary = {}
-        if Par['verbose'] and rank == 0 : print('loading the Gaussian power spectra produced by COVMOS_ini.py in ',Par['output_ini_file']+'.npz',flush=True)
+        if Par['verbose'] and rank == 0 : print('loading the Gaussian power spectra produced by COVMOS.py in ini mode ',Par['output_ini_file']+'.npz',flush=True)
         file = np.load(Par['output_ini_file']+'.npz')
         
         if not Par['PDF_d_file'] == 'gaussian':

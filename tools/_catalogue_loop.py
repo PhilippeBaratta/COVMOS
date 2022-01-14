@@ -27,8 +27,13 @@ from tools._save_analyse_catalogues import *
 from tools._numba_functions import *
 from tools._assignment_schemes import *
 from tools._COVMOS_covariance import *
+from tools.fast_interp.fast_interp.fast_interp import interp1d
+
 
 def generate_analyse_catalogues(Par,Ary):
+    
+    mapping = interp1d(a=np.amin(Ary['x_nu']),b=np.amax(Ary['x_nu']),h=Ary['x_nu'][1]-Ary['x_nu'][0],f=Ary['L_of_nu'],k=3)
+    
     number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
     comm.Barrier()
     if number_in_folder < Par['total_number_of_cat'] : sleep(intracomm.Get_rank()*20)
@@ -65,8 +70,9 @@ def generate_analyse_catalogues(Par,Ary):
             real1           = FFTw.empty_aligned(Par['grid_shape'], dtype='float64')
             real1[:,:,:]    = FFTw.interfaces.numpy_fft.ifftn(complex1,axes=(0,1,2))                      ; del complex1  
             if not Par['PDF_d_file'] == 'gaussian':
-                real1[:,:,:]    = np.interp(real1,Ary['x_nu'],Ary['L_of_nu'])
-
+                #real1[:,:,:]    = np.interp(real1,Ary['x_nu'],Ary['L_of_nu'])
+                real1[:,:,:]    = mapping(real1)
+                
             if Par['assign_scheme'] == 'tophat':  
                 rho = from_delta_to_rho_times_a3(real1,Par['rho_0']*Par['a']**3)                          ; del real1
                 Nbr = np.random.poisson(rho).flatten()
