@@ -1,6 +1,6 @@
 import numpy as np
 from os import rename
-from os.path import dirname,realpath
+from os.path import dirname,realpath,exists
 import subprocess
 import socket
 from time import sleep
@@ -26,7 +26,8 @@ def save_catalogue_data(Par,tot_obj,cat,v_cat,sim_ref):
     if Par['velocity']: 
         np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:],v_cat[0,:]*GADGET,v_cat[1,:]*GADGET,v_cat[2,:]*GADGET)).astype(np.float32).tofile(file)
     file.close
-    sleep(3)
+    while not exists(sim_ref['sim_name']):
+        sleep(1)
     rename(sim_ref['sim_name'],sim_ref['sim_name']+'.data')
     
 def Pk_poles_estimate_detached(Par,sim_ref):
