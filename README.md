@@ -84,6 +84,13 @@ The multipoles (monopole, quadrupole, hexadecapole) of the power spectrum, both 
 
 The COVMOS covariance of the multipoles of the power spectrum are slightly biased at small scales (k ~ 0.2h/Mpc). This bias can be removed applying the method presented in Baratta et al. 22 (in prep) and asked by the user in the .ini file
 
+# Installation
+
+When cloning COVMOS to your directory, make sure to pass the option `--recurse-submodules` to the git `clone command`, it will automatically initialize and update one external submodule used by COVMOS, called [fast_interp](https://github.com/dbstein/fast_interp):
+`git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git`
+
+Moreover, make sure that the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library is already installed on you machine (mandatory), as well as [NBodyKit](https://github.com/bccp/nbodykit) and [classy](https://github.com/lesgourg/class_public) if you want COVMOS to use them (optionnal).
+
 # Parallel computation
 
 When running on a single node COVMOS.py, a multiprocessing can be exploited thanks to the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library by setting the environment variable OMP_NUM_THREADS to the wanted number of processes.
