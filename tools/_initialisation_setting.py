@@ -3,6 +3,7 @@ from ast import literal_eval
 from configparser import ConfigParser
 from os import path,makedirs,remove
 from zipfile import ZipFile
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 from tools._numba_functions import *
 from tools._shell_averaging import *
@@ -99,9 +100,7 @@ def read_parameters(inifile,mode):
     if path.exists(Par['Pk_dd_file']) and mode == 'ini':
         if rank == 0:
             if (not Par['Pk_dd_file'][-4:] == '.npy'):
-                try: 
-                    kk,_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
-                    if kk[0] > 2*np.pi/Par['L'] : raise Exception('the kmin in',Par['Pk_dd_file'],'is too high (> 2pi/L), you should extrapolate it down to lower modes')
+                try: kk,_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
                 except: raise Exception('the ascii file associated to Pk_dd_file is not composed of two columns (k in h/Mpc and Pk in [Mpc/h]^3)')
             else:
                 with open(Par['Pk_dd_file'], 'rb') as f:
@@ -400,8 +399,10 @@ def loading_ini_files(Par,mode):
             if Par['Pk_dd_file'] == '': density_field['Pk_1D_dd'],_ = classy_compute_Pk(Par)
             else :
                 k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
-                if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
-                density_field['Pk_1D_dd'] = np.vstack((k_dd_,Pk_1D_dd_))
+                s = InterpolatedUnivariateSpline(np.log(k_dd_),np.log(Pk_1D_dd_), k=1)
+                kkk = np.geomspace(2*np.pi/Par['L'],50,1000)
+                #if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
+                density_field['Pk_1D_dd'] = np.vstack((kkk,np.exp(s(np.log(kkk)))))
             if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_dd',np.transpose(density_field['Pk_1D_dd']))
 
         if Par['velocity']:
