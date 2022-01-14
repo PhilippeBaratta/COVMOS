@@ -1,0 +1,3 @@
+[submodule "tools/fast_interp"]
+	path = tools/fast_interp
+	url = https://github.com/dbstein/fast_interp.git

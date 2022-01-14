@@ -400,7 +400,7 @@ def loading_ini_files(Par,mode):
             else :
                 k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
                 s = InterpolatedUnivariateSpline(np.log(k_dd_),np.log(Pk_1D_dd_), k=1)
-                kkk = np.geomspace(2*np.pi/Par['L'],50,1000)
+                kkk = np.geomspace(2*np.pi/Par['L'],50,500)
                 #if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
                 density_field['Pk_1D_dd'] = np.vstack((kkk,np.exp(s(np.log(kkk)))))
             if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_dd',np.transpose(density_field['Pk_1D_dd']))
