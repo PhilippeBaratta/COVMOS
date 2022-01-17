@@ -70,8 +70,8 @@ def generate_analyse_catalogues(Par,Ary):
             real1           = FFTw.empty_aligned(Par['grid_shape'], dtype='float64')
             real1[:,:,:]    = FFTw.interfaces.numpy_fft.ifftn(complex1,axes=(0,1,2))                      ; del complex1  
             if not Par['PDF_d_file'] == 'gaussian':
-                #real1[:,:,:]    = np.interp(real1,Ary['x_nu'],Ary['L_of_nu'])
-                real1[:,:,:]    = mapping(real1)
+                real1[:,:,:]    = np.interp(real1,Ary['x_nu'],Ary['L_of_nu'])
+                #real1[:,:,:]    = mapping(real1)
                 
             if Par['assign_scheme'] == 'tophat':  
                 rho = from_delta_to_rho_times_a3(real1,Par['rho_0']*Par['a']**3)                          ; del real1
@@ -93,7 +93,6 @@ def generate_analyse_catalogues(Par,Ary):
             save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat)                                        ; del cat,v_cat
 
         number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
-    
     comm.Barrier()
     if Par['verbose'] and rank == 0:  stdout.write("\rloop on catalogues: %i / %i, %i%%" %(number_in_folder,Par['total_number_of_cat'],(number_in_folder/Par['total_number_of_cat'])*100)) ; stdout.flush()
 

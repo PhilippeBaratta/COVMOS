@@ -30,7 +30,8 @@ def read_parameters(inifile,mode):
         i1 and i2 are empirically chosen to maximize the range of well simulated modes
         '''
         z_ref  = [0.,0.48551,1.05352,1.45825,2.05053]
-        i1_ref = [3,3,4,4,5]
+        #i1_ref = [3,3,4,4,5]
+        i1_ref = [2,2,3,3,4]
         i1     = np.interp(redshift,z_ref,i1_ref)
         i2     = 12
         return i1,i2
@@ -138,8 +139,8 @@ def read_parameters(inifile,mode):
     Par['velocity'] = config.getboolean('OUTPUTS', 'velocity')# need it now
     ###########################################################
     
+    Par['Pk_tt_file'] = config.get(var_type, 'Pk_tt_file')
     if Par['velocity']:
-        Par['Pk_tt_file'] = config.get(var_type, 'Pk_tt_file')
         if Par['Pk_tt_file'] == '' or Par['Pk_tt_file'] == "''": Par['Pk_tt_file'] = ''
         if not path.exists(Par['Pk_tt_file']) and not Par['Pk_tt_file'] == '':
             raise Exception('Pk_tt_file not found:',Par['Pk_tt_file'])
@@ -188,7 +189,7 @@ def read_parameters(inifile,mode):
     if Par['compute_covariance'] is True and Par['estimate_Pk_multipoles'] is False:
         raise Exception('you asked COVMOS to compute the unbiased covariance but estimate_Pk_multipoles = False, please modify the input parameters')
     
-    if Par['aliasing_order'] == 'Default' and not Par['Pk_dd_file'][-4:] == '.npy': Par['aliasing_order'] = 2
+    if Par['aliasing_order'] == 'Default' and not Par['Pk_dd_file'][-4:] == '.npy': Par['aliasing_order'] = 1
     
     if Par['project_name'] == '' or Par['project_name'] == "''":
         Par['project_name'] = 'COVMOS_' + 'Ns' + str(Par['N_sample']) + '_L' + str(Par['L']) + '_z' + str(Par['redshift']) + '_rho' + str(Par['rho_0']) + '_Om' + str(Par['Omega_m']) + '_' + Par['assign_scheme'] + '_scheme' + (not Par['Pk_dd_file'][-4:] == '.npy') * ('_aliasOrd' + str(Par['aliasing_order'])) + Par['velocity'] * ('_alpha' + str(Par['alpha']) + '_Vrms' + str(Par['targeted_rms'])) + Par['fixed_Rdm_seed'] * '_fixed_Rdm_seed' + (Par['PDF_d_file'] == 'gaussian') * '_gaussianPDF'
@@ -400,7 +401,7 @@ def loading_ini_files(Par,mode):
             else :
                 k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
                 s = InterpolatedUnivariateSpline(np.log(k_dd_),np.log(Pk_1D_dd_), k=1)
-                kkk = np.geomspace(2*np.pi/Par['L'],50,500)
+                kkk = np.geomspace(min(1e-3,2*np.pi/Par['L']),50,1000)
                 #if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
                 density_field['Pk_1D_dd'] = np.vstack((kkk,np.exp(s(np.log(kkk)))))
             if Par['debug'] and rank == 0: np.savetxt(Par['output_dir_project'] + '/debug_files/Pk_1D_dd',np.transpose(density_field['Pk_1D_dd']))
