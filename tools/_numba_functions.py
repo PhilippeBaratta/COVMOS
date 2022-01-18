@@ -143,8 +143,7 @@ def inverse_div_theta(complex1,byprod_pk_velocity):
     for i in prange(sampling):
         for j in prange(sampling):
             for k in prange(sampling):
-                if k_3D_2[i,j,k] != 0:
-                    array[i,j,k] = -1j*(complex1[i,j,k]*byprod_pk_velocity[i,j,k])
+                array[i,j,k] = -1j*(complex1[i,j,k]*byprod_pk_velocity[i,j,k])
     return array  
 
 @njit(parallel=True,cache=True)
