@@ -39,7 +39,9 @@ def generate_analyse_catalogues(Par,Ary):
     
     number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
     comm.Barrier()
-    if number_in_folder < Par['total_number_of_cat'] : sleep(intracomm.Get_rank()*20)
+    if number_in_folder < Par['total_number_of_cat'] : 
+        if Par['total_number_of_cat'] >= 1000 :  sleep(intracomm.Get_rank()*150)
+        else :                                   sleep(intracomm.Get_rank()*60)
     
     if Par['verbose'] and rank == 0: print('\n_____________________________ START CATALOGUES SIMULATION ____________________________\n',flush=True)
     while number_in_folder < Par['total_number_of_cat']:
