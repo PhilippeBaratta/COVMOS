@@ -158,7 +158,7 @@ def read_parameters(inifile,mode):
             class_dic_param['P_k_max_h/Mpc'] = 50
             class_dic_param['z_pk'] = Par['redshift']
             Par['classy_dict'] = class_dic_param
-        except: raise Exception('a classy dictionnary (classy_dict) with cosmological parameters must be provided if Pk_dd_file is empty or if Pk_tt_file is empty (while velocity = True)')
+        except: raise Exception('a classy dictionnary (classy_dict) with cosmological parameters must be provided if Pk_dd_file is empty or if Pk_tt_file is empty (while velocity = True). If you have already filled in a dictionary, it seems that it cannot be read. Be careful not to put any operation (+-/...)')
     
     if Par['velocity']:
         try: Par['targeted_rms'] = config.getfloat(var_type , 'targeted_rms')
