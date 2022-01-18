@@ -86,7 +86,7 @@ def sqrt_of_array_times_scalar(array,scalar):
     return array_
 
 @njit(parallel=True,cache=True)
-def sqrt_of_arrays_times_scalars(array1,scalar1,array2,scalar2):
+def sqrt_of_arrays_times_scalars(array1,scalar1,array2,scalar2,k_3D):
     '''
     computes sqrt(arr*scalar) for two pairs arrays-scalar using numba
     '''
@@ -95,8 +95,9 @@ def sqrt_of_arrays_times_scalars(array1,scalar1,array2,scalar2):
     for i in prange(array1_.shape[0]):
         for j in prange(array1_.shape[1]):
             for k in prange(array1_.shape[2]):
+                if k_3D_2[i,j,k] != 0:
                     array1_[i,j,k] = np.sqrt(array1[i,j,k]*scalar1)
-                    array2_[i,j,k] = np.sqrt(array2[i,j,k]*scalar2)
+                    array2_[i,j,k] = np.sqrt(array2[i,j,k]*scalar2)/k_3D[i,j,k]**2
     return array1_,array2_
     
 @njit(parallel=True,cache=True)
@@ -136,14 +137,14 @@ def filtering_operation(pktofilt_,type_filt_,norm_3D_,R_,index_):
     return array_
 
 @njit(parallel = True, cache=True)
-def inverse_div_theta(complex1,byprod_pk_velocity,k_3D_2):
+def inverse_div_theta(complex1,byprod_pk_velocity):
     array = np.zeros_like(complex1)
     sampling = array.shape[0]
     for i in prange(sampling):
         for j in prange(sampling):
             for k in prange(sampling):
                 if k_3D_2[i,j,k] != 0:
-                    array[i,j,k] = -1j*(complex1[i,j,k]*byprod_pk_velocity[i,j,k])/k_3D_2[i,j,k]
+                    array[i,j,k] = -1j*(complex1[i,j,k]*byprod_pk_velocity[i,j,k])
     return array  
 
 @njit(parallel=True,cache=True)

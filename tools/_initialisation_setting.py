@@ -436,7 +436,6 @@ def loading_ini_files(Par,mode):
         if Par['velocity']: 
             Ary['byprod_pk_velocity'] = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
             Ary['kz']                 = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
-            Ary['k_3D_2']             = sharing_array_throw_MPI(Par['grid_shape'],intracomm,'float32')
 
             if intracomm.rank == 0:
                 Ns = Par['N_sample']
@@ -444,7 +443,6 @@ def loading_ini_files(Par,mode):
                 ref     = np.arange(Ns,dtype=np.int16)
                 norm_1d = (np.concatenate((ref[ref<Ns/2] *k_F,(ref[ref >= Ns/2] - Ns)*k_F))).astype(np.float32)
                 Ary['kz'][:,:,:]     = np.array([[norm_1d,]*Ns]*Ns,dtype=np.float32)
-                Ary['k_3D_2'][:,:,:] = fast_sqrtnorm(Ary['kz'].transpose(2,1,0),Ary['kz'].transpose(0,2,1),Ary['kz'])
                 Ary['byprod_pk_velocity'][:,:,:] = file['arr_3']
         
         if Par['verbose'] and rank == 0 : print('computing and storing grid features',flush=True)
@@ -460,32 +458,26 @@ def loading_ini_files(Par,mode):
                                 
                                 
     
-def Fouriermodes(Par,mode=0):
+def Fouriermodes(Par):
     '''
     setting the Fourier modes on the grid and computing the shell-averaged modes (if compute_Pk_prediction == True or debug == True)
-    it returns k_3D in float64, k_3D_2 in float32 and k_1D in float64
-    mode = 0 -> all output are returned (k_3D,k_3D_2,k_1D)
-    mode = 1 -> output 0 and 2 are returned (k_3D,k_1D)
-    mode = 2 -> output 1 are returned (k_3D_2)
+    it returns k_3D in float64 and k_1D in float64
     '''
     Ns = Par['N_sample'] ; L  = Par['L'] ; k_F = 2*np.pi/L
     Fourier_file = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + 'Fouriermodes_L%s_Ns%i'%(L,Ns)
     force_compute_k_1D = False
-    k_3D = 0 ; k_3D_2 = 0 ; k_1D = 0
+    k_3D = 0 ; k_1D = 0
     
     if path.exists(Fourier_file + '.npz'):
         if Par['verbose'] and rank == 0: print('load Fourier modes from', Fourier_file + '.npz',flush=True)
             
         file = np.load(Fourier_file + '.npz')
-        if mode == 0 or mode == 2:
-            k_3D_2 = file['arr_1']
-        if mode == 0 or mode == 1:
-            if rank == 0: k_3D = file['arr_0']
-            k_1D = file['arr_2']
-            
-            if len(k_1D) == 1 and (Par['compute_Pk_prediction'] or Par['debug']):
-                if Par['verbose'] and rank == 0: print('the existing file ', Fourier_file, '.npz has no shell-averaged modes (k_1D) due to the chosen parameters in a previous project, lets compute it now',flush=True)
-                force_compute_k_1D = True
+        if rank == 0: k_3D = file['arr_0']
+        k_1D = file['arr_1']
+        
+        if len(k_1D) == 1 and (Par['compute_Pk_prediction'] or Par['debug']):
+            if Par['verbose'] and rank == 0: print('the existing file ', Fourier_file, '.npz has no shell-averaged modes (k_1D) due to the chosen parameters in a previous project, lets compute it now',flush=True)
+            force_compute_k_1D = True
                 
     if not path.exists(Fourier_file + '.npz') or force_compute_k_1D:
         if Par['verbose'] and rank == 0:  print('setting the Fourier modes on the grid',flush=True)
@@ -497,30 +489,26 @@ def Fouriermodes(Par,mode=0):
             norm_1d     = np.concatenate((ref[ref<Ns/2] *k_F,(ref[ref >= Ns/2] - Ns)*k_F))
             kz          = np.array([[norm_1d,]*Ns]*Ns)
             k_3D[:,:,:] = fast_norm(kz.transpose(2,1,0),kz.transpose(0,2,1),kz) #sqrt(kx^2 + ky^2 + kz^2)
-            kz          = kz.astype(np.float32)
-            k_3D_2      = (array_times_array(k_3D,k_3D)).astype(np.float32)
         
         if Par['compute_Pk_prediction'] or Par['debug']:
             SA_trick = shellaveraging_trick_function(Par,k_3D) # only rank 0 receives
             
             if rank == 0:
                 k_1D = shell_averaging(SA_trick,k_3D)
-                np.savez(Fourier_file,k_3D,k_3D_2,k_1D)
+                np.savez(Fourier_file,k_3D,k_1D)
         else:
             if rank == 0:
                 k_1D = [0]
-                np.savez(Fourier_file,k_3D,k_3D_2,k_1D)
+                np.savez(Fourier_file,k_3D,k_1D)
                 
         if Par['verbose'] and rank == 0 : print('Fourier modes files has been saved in ' + Fourier_file + '.npz',flush=True)
         
         comm.Barrier()
         
-    if mode == 0: return k_3D,k_3D_2,k_1D
-    if mode == 1: return k_3D,k_1D
-    if mode == 2: return k_3D_2
+    return k_3D,k_1D
     
 
-def save_ini_files(density_field,velocity_field,Par,PDF_map):
+def save_ini_files(density_field,velocity_field,Par,PDF_map,k_3D):
     Ns = Par['N_sample'] ; k_F = 2.*np.pi/Par['L']
     
     if rank == 0:
@@ -529,7 +517,7 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map):
         scalar_velocity = Ns**3 * k_F**3
         
         if Par['velocity']:
-            byprod_pk_density,byprod_pk_velocity = sqrt_of_arrays_times_scalars(density_field['Pk_nu'],scalar_density,velocity_field['Pk_3D_tt'],scalar_velocity)
+            byprod_pk_density,byprod_pk_velocity = sqrt_of_arrays_times_scalars(density_field['Pk_nu'],scalar_density,velocity_field['Pk_3D_tt'],scalar_velocity,k_3D)
         else:
             byprod_pk_density = sqrt_of_array_times_scalar(density_field['Pk_nu'],scalar_density)
             byprod_pk_velocity = np.array([0.])

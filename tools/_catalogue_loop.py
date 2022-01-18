@@ -61,7 +61,7 @@ def generate_analyse_catalogues(Par,Ary):
 
             if Par['velocity']:
                 complex2        = FFTw.empty_aligned(Par['grid_shape'], dtype='complex64')
-                complex2[:,:,:] = inverse_div_theta(complex1,Ary['byprod_pk_velocity'],Ary['k_3D_2'])
+                complex2[:,:,:] = inverse_div_theta(complex1,Ary['byprod_pk_velocity'])
                 v_grid          = FFTw.empty_aligned((3,Par['N_sample'],Par['N_sample'],Par['N_sample']), dtype='float32')
                 
                 v_grid[0,:,:,:] = FFTw.interfaces.numpy_fft.ifftn(array_times_array(complex2,Ary['kz'].transpose(2,1,0)),axes=(0,1,2)) 

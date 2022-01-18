@@ -22,7 +22,7 @@ if COVMOS_type in ['ini','both']:
     Par = read_parameters(ini_file,mode='ini')
     generate_output_repertories(Par,mode='ini')
     density_field,velocity_field = loading_ini_files(Par,mode='ini')
-    k_3D,k_1D = Fouriermodes(Par,mode=1)
+    k_3D,k_1D = Fouriermodes(Par)
 
     PDF_map = Mehler(Par,density_field)
 
@@ -33,7 +33,7 @@ if COVMOS_type in ['ini','both']:
 
     velocity_field = get_Pk_tt_3d(velocity_field,k_3D,Par)
 
-    save_ini_files(density_field,velocity_field,Par,PDF_map)
+    save_ini_files(density_field,velocity_field,Par,PDF_map,k_3D)
 
     compute_2PS_predictions(Par,density_field,PDF_map,k_1D)
     
