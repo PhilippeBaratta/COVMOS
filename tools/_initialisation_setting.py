@@ -518,10 +518,12 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map,k_3D):
         
         if Par['velocity']:
             byprod_pk_density,byprod_pk_velocity = sqrt_of_arrays_times_scalars(density_field['Pk_nu'],scalar_density,velocity_field['Pk_3D_tt'],scalar_velocity,k_3D)
+            byprod_pk_velocity[0,0,0] = 0.
         else:
             byprod_pk_density = sqrt_of_array_times_scalar(density_field['Pk_nu'],scalar_density)
             byprod_pk_velocity = np.array([0.])
         
+        byprod_pk_density[0,0,0] = 0.
         if Par['verbose']: print('saving the initilisation files used by COVMOS_sim.py in',Par['output_ini_file'],flush=True)
             
         np.savez(Par['output_ini_file'],PDF_map['x_nu'],PDF_map['NL_map'],byprod_pk_density,byprod_pk_velocity.astype(np.float32)) 
