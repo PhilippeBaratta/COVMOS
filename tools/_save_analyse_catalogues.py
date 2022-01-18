@@ -1,9 +1,10 @@
 import numpy as np
 from os import rename
-from os.path import dirname,realpath,exists
+from os.path import dirname,realpath,exists,join
 import subprocess
 import socket
 from time import sleep
+from glob import glob
 
 from tools._velocity_model import *
 
@@ -44,3 +45,24 @@ def Pk_poles_estimate_detached(Par,sim_ref):
     pid = subprocess.Popen(['ssh', '-o', 'StrictHostKeyChecking=no',socket.gethostname(),'python','-W','ignore',dir_path+'/_Pk_estimate_NBK_detached.py',filename,str(RSD),str(redshift),str(L),str(savecat),str(Omega_m),str(number_ref),str(Pk_file),str(Pk_RSD_file),'-c','&'],shell=False,stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     return
 
+def regroup_Pks(Par):
+    filename_ = glob(join(Par['folder_Pk']+'COVMOS_cat*'))
+    nbr_pk = len(filename_)
+    Pks = np.zeros((nbr_pk,5,254))
+    i = 0
+    for filename in filename_:
+        Pks[i,0,:],Pks[i,1,:],Pks[i,2,:],Pks[i,3,:],Pks[i,4,:] = np.loadtxt(filename,unpack=1)
+        i+=1
+    np.save(Par['folder_Pk']+'COVMOS_all_Pk',Pks)
+    
+    if Par['velocity']:
+        filename_ = glob(join(Par['folder_Pk_RSD']+'COVMOS_cat*'))
+        nbr_pk = len(filename_)
+        Pks = np.zeros((nbr_pk,5,254))
+        i = 0
+        for filename in filename_:
+            Pks[i,0,:],Pks[i,1,:],Pks[i,2,:],Pks[i,3,:],Pks[i,4,:] = np.loadtxt(filename,unpack=1)
+            i+=1
+        np.save(Par['folder_Pk_RSD']+'COVMOS_all_Pk_RSD',Pks)
+    return
+        

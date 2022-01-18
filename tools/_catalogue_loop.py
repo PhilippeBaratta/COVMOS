@@ -98,16 +98,15 @@ def generate_analyse_catalogues(Par,Ary):
     comm.Barrier()
     if Par['verbose'] and rank == 0:  stdout.write("\rloop on catalogues: %i / %i, %i%%" %(number_in_folder,Par['total_number_of_cat'],(number_in_folder/Par['total_number_of_cat'])*100)) ; stdout.flush()
 
-    if rank == 0 :
+    if rank == 0 and not Par['estimate_Pk_multipoles'] == False:
         if Par['verbose']:  
-            print('\n',flush=True)
-            if Par['compute_covariance']: print('waiting for the power spectra...',flush=True)
+            print('\nwaiting for the power spectra...',flush=True)
         if not Par['velocity']:
-            while not len(glob(osp.join(Par['folder_Pk']+'*'))) == Par['total_number_of_cat']: sleep(10)
+            while not len(glob(osp.join(Par['folder_Pk']+'COVMOS_cat*'))) == Par['total_number_of_cat']: sleep(10)
         else:
-            while not len(glob(osp.join(Par['folder_Pk_RSD']+'*'))) == Par['total_number_of_cat']: sleep(10)
-        if Par['verbose'] and Par['compute_covariance']: print('computing the unbiased covariance in',Par['folder_cov'],flush=True)
-            
+            while not len(glob(osp.join(Par['folder_Pk_RSD']+'COVMOS_cat*'))) == Par['total_number_of_cat']: sleep(10)
+        
+        regroup_Pks(Par)
         compute_COVMOS_covariance(Par)
         
 
