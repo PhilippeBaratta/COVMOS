@@ -330,9 +330,9 @@ def loading_ini_files(Par,mode):
             return np.exp(slope*np.log(x_extrap)+beta);
         Pkmax      = extrap(k_max,k,Pk,firstp)
         k_etptra    = np.linspace(np.log(np.amax(k)),np.log(k_max),100)[1:]
-        Pk_Syl_etptra   = np.interp(k_etptra,np.log(np.array([k[-1],k_max])),np.log(np.array([Pk[-1],Pkmax])))
+        Pk_etptra   = np.interp(k_etptra,np.log(np.array([k[-1],k_max])),np.log(np.array([Pk[-1],Pkmax])))
         k          = np.insert(k,len(k),np.exp(k_etptra))
-        Pk         = np.insert(Pk,len(Pk),np.exp(Pk_Syl_etptra))
+        Pk         = np.insert(Pk,len(Pk),np.exp(Pk_etptra))
         return k,Pk
     
     def classy_compute_Pk(Par,prescription = 'Default'):

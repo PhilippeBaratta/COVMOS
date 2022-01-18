@@ -15,6 +15,7 @@ size = comm.Get_size()
 
 from tools._shell_averaging import *
 from tools._numba_functions import *
+from tools.fast_interp.fast_interp.fast_interp import interp1d
 
 intracomm = from_globalcomm_to_intranode_comm()
 intrarank = intracomm.rank
@@ -35,7 +36,9 @@ def compute_2PS_predictions(Par,density_field,PDF_map,k_1D):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 xi_nu[:,:,:] = pyfftw.interfaces.numpy_fft.ifftn(density_field['Pk_nu'],axes=(0,1,2))*(Ns*k_F)**3
-                xi_delta     = np.interp(xi_nu,PDF_map['Xi_G_template'],PDF_map['Xi_NG_template'])          ; del xi_nu
+                mapping = interp1d(a=np.amin(PDF_map['Xi_G_template']),b=np.amax(PDF_map['Xi_G_template']),h=PDF_map['Xi_G_template'][1]-PDF_map['Xi_G_template'][0],f=PDF_map['Xi_NG_template'],k=1)
+                xi_delta     = mapping(xi_nu)                                                               ; del xi_nu
+                #xi_delta     = np.interp(xi_nu,PDF_map['Xi_G_template'],PDF_map['Xi_NG_template'])          ; del xi_nu
                 Pk_target[:,:,:] = pyfftw.interfaces.numpy_fft.fftn(xi_delta,axes=(0,1,2))/(Ns*k_F)**3
         else: 
             Pk_target[:,:,:] = density_field['Pk_nu']                                                      ; del xi_nu
