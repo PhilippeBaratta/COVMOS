@@ -209,6 +209,7 @@ def read_parameters(inifile,mode):
         Par['folder_saving'] = Par['output_dir_project'] + '/outputs_sim/' 
         Par['folder_job']    = Par['folder_saving'] + '_job/'
         Par['folder_beta']   = Par['folder_saving'] + '_beta/'
+        
         Par['folder_sim']    = Par['folder_saving'] + 'COVMOS_catalogues/'
         Par['file_sim']      = Par['folder_sim']    + 'COVMOS_catalogue'
         
@@ -268,7 +269,7 @@ def generate_output_repertories(Par,mode):
         
         if Par['velocity']:
             makedirs(Par['folder_beta'],exist_ok=True)
-        
+                    
         if Par['estimate_Pk_multipoles'] is not False:
             makedirs(Par['folder_Pk'],exist_ok=True)
             if Par['velocity']: 
@@ -371,24 +372,30 @@ def loading_ini_files(Par,mode):
         comm.Barrier()
         return Pk_classy,sigma8m
     
+    def f_func(a,Om_m0): 
+        return Om_m(a,Om_m0)**alpha(a,Om_m0)
+    def Om_m(a,Om_m0):   
+        return Om_m0/(a**3*E(a,Om_m0)**2)
+    def E(a,Om_m0):   
+        return np.sqrt(Om_m0/a**3 + (1-Om_m0))
+    def alpha(a,Om_m0):  
+        return 6/11 -15/2057 * np.log(Om_m(a,Om_m0)) + 205/540421 * np.log(Om_m(a,Om_m0))**2
+    def ztoa(z):   
+        return 1/(1+z)
+    
+    if Par['compute_Pk_prediction'] or Par['compute_2pcf_prediction']: 
+        np.savetxt(Par['output_dir_project'] + '/TwoPointStat_predictions/f_value',[f_func(ztoa(Par['redshift']),Par['Omega_m'])])
+    
     def Bel_et_al_fitting_functions(sigma8m,Pk_1D_dd_lin,Par):
         '''
         uses arxiv.org/abs/1906.07683 to compute the theta-theta power spectrum from the linear power spectrum using fitting functions
         '''
-        def f_func(a,Om_m0): 
-            return Om_m(a,Om_m0)**alpha(a,Om_m0)
-        def Om_m(a,Om_m0):   
-            return Om_m0/(a**3*E(a,Om_m0)**2)
-        def E(a,Om_m0):   
-            return np.sqrt(Om_m0/a**3 + (1-Om_m0))
-        def alpha(a,Om_m0):  
-            return 6/11 -15/2057 * np.log(Om_m(a,Om_m0)) + 205/540421 * np.log(Om_m(a,Om_m0))**2
-        def ztoa(z):   
-            return 1/(1+z)
-        
         a1 = -0.817 + 3.198 * sigma8m ; a2 =  0.877 - 4.191 * sigma8m ; a3 = -1.199 + 4.629 * sigma8m
-        Pk_tt_lin    = f_func(ztoa(Par['redshift']),Par['Omega_m'])**2 * Pk_1D_dd_lin[1]    
-        Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
+        Pk_tt_lin    = f_func(ztoa(Par['redshift']),Par['Omega_m'])**2 * Pk_1D_dd_lin[1]  
+        if ('non linear' in Par['classy_dict']):
+            Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
+        else:
+            Pk_tt_theo1d = Pk_tt_lin
         return np.vstack((Pk_1D_dd_lin[0],Pk_tt_theo1d))
     
     if mode == 'ini':                         
