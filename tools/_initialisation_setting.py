@@ -197,6 +197,9 @@ def read_parameters(inifile,mode):
     Par['output_dir_project'] = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + Par['project_name']
     Par['output_ini_file'] = Par['output_dir_project'] + '/ini_files/ini_file'
     
+    if Par['PDF_d_file'] == 'gaussian' and Par['velocity'] == True:
+        raise Exception('PDF_d_file = gaussian is not compatible with velocity =True')
+    
     if mode == 'sim':
         Par['a'] = Par['L']/Par['N_sample']
         def Eofz(z,Omega_m): 
@@ -515,6 +518,9 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map,k_3D):
         
         scalar_density  = Ns**3/np.sum(density_field['Pk_nu'])
         scalar_velocity = Ns**3 * k_F**3
+        
+        if Par['PDF_d_file'] == 'gaussian':
+            scalar_density *= PDF_map['var_PDF']
         
         if Par['velocity']:
             byprod_pk_density,byprod_pk_velocity = sqrt_of_arrays_times_scalars(density_field['Pk_nu'],scalar_density,velocity_field['Pk_3D_tt'],scalar_velocity,k_3D)
