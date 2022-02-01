@@ -40,16 +40,15 @@ def generate_analyse_catalogues(Par,Ary):
     number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
     comm.Barrier()
     if number_in_folder < Par['total_number_of_cat'] : 
-        if Par['total_number_of_cat'] >= 1000 :  sleep(intracomm.Get_rank()*150)
+        if Par['total_number_of_cat'] >= 1000 :  sleep(intracomm.Get_rank()*180)
         else :                                   sleep(intracomm.Get_rank()*60)
-    
+    sleep(comm.Get_rank()*2)
     if Par['verbose'] and rank == 0: print('\n_____________________________ START CATALOGUES SIMULATION ____________________________\n',flush=True)
     while number_in_folder < Par['total_number_of_cat']:
         if Par['verbose'] and rank == 0:  stdout.write("\rloop on catalogues: %i / %i, %i%%" %(number_in_folder,Par['total_number_of_cat'],(number_in_folder/Par['total_number_of_cat'])*100)) ; stdout.flush()
             
         sim_ref = find_a_sim_number_to_run(Par)
         if not osp.exists(sim_ref['job_name']):
-            
             np.savetxt(sim_ref['job_name'],[1])
             if Par['fixed_Rdm_seed'] : np.random.seed(0)
             else                     : np.random.seed()
@@ -79,18 +78,18 @@ def generate_analyse_catalogues(Par,Ary):
                 
             if Par['assign_scheme'] == 'tophat':  
                 rho = from_delta_to_rho_times_a3(real1,Par['rho_0']*Par['a']**3)                          ; del real1
-                Nbr = np.random.poisson(rho).flatten()
+                Nbr = np.random.poisson(rho).astype(np.int32).flatten()
                 rho = np.array([],dtype=np.float64) 
 
             if Par['assign_scheme'] == 'trilinear':
                 rho,rho_mean_times_a3 = mean_delta_times_a3(real1,Par['a']**3,Par['rho_0'])               ; del real1
-                Nbr = np.random.poisson(rho_mean_times_a3).flatten()                                      ; del rho_mean_times_a3
-
-            non_0_  = np.where(Nbr!=0)[0] ; tot_obj = np.sum(Nbr) ; cumu = np.insert(np.cumsum(Nbr),0,0)
-            rho_itp = np.zeros(tot_obj,dtype='float64')
-            cat = np.zeros((3,tot_obj),dtype='float32')
-            v_itp = np.zeros((3,tot_obj),dtype='float32')
-
+                Nbr = np.random.poisson(rho_mean_times_a3).astype(np.int32).flatten()                     ; del rho_mean_times_a3
+            
+            non_0_  = (np.where(Nbr!=0)[0]).astype(np.int32) ; tot_obj = np.sum(Nbr) ; cumu = np.insert(np.cumsum(Nbr),0,0).astype(np.int32)
+            rho_itp = np.zeros(tot_obj,dtype='float32')
+            cat     = np.zeros((3,tot_obj),dtype='float32')
+            v_itp   = np.zeros((3,tot_obj),dtype='float32')
+            
             rdm_spl = np.random.random((3,tot_obj))
             cat,rho_itp,v_itp = discrete_assignment(cat,rho_itp,v_itp,non_0_,Nbr,cumu,rdm_spl,rho,v_grid,Par,Ary) ; del rdm_spl,v_grid,cumu,Nbr,rho,non_0_
             v_cat = apply_velocity_model(Par,rho_itp,v_itp)                                               ; del rho_itp,v_itp

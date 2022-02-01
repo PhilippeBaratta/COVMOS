@@ -392,10 +392,10 @@ def loading_ini_files(Par,mode):
         '''
         a1 = -0.817 + 3.198 * sigma8m ; a2 =  0.877 - 4.191 * sigma8m ; a3 = -1.199 + 4.629 * sigma8m
         Pk_tt_lin    = f_func(ztoa(Par['redshift']),Par['Omega_m'])**2 * Pk_1D_dd_lin[1]  
-        if ('non linear' in Par['classy_dict']):
-            Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
-        else:
-            Pk_tt_theo1d = Pk_tt_lin
+        #if ('non linear' in Par['classy_dict']):
+        Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
+        #else:
+        #    Pk_tt_theo1d = Pk_tt_lin
         return np.vstack((Pk_1D_dd_lin[0],Pk_tt_theo1d))
     
     if mode == 'ini':                         
@@ -410,7 +410,7 @@ def loading_ini_files(Par,mode):
             if Par['Pk_dd_file'] == '': density_field['Pk_1D_dd'],_ = classy_compute_Pk(Par)
             else :
                 k_dd_,Pk_1D_dd_ = np.loadtxt(Par['Pk_dd_file'],unpack=1)
-                s = InterpolatedUnivariateSpline(np.log(k_dd_),np.log(Pk_1D_dd_), k=1)
+                s = InterpolatedUnivariateSpline(np.log(k_dd_),np.log(Pk_1D_dd_), k=2)
                 kkk = np.geomspace(min(1e-3,2*np.pi/Par['L']),50,1000)
                 #if k_dd_[-1]<50: k_dd_,Pk_1D_dd_ = extrap_k_loglin(50,k_dd_,Pk_1D_dd_,2)
                 density_field['Pk_1D_dd'] = np.vstack((kkk,np.exp(s(np.log(kkk)))))

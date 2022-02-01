@@ -22,13 +22,14 @@ def save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat):
 def save_catalogue_data(Par,tot_obj,cat,v_cat,sim_ref):
     GADGET = 100*np.sqrt(1+Par['redshift'])
     file = open(sim_ref['sim_name'], mode='wb')
+    
     if not Par['velocity']: 
-        np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:])).astype(np.float32).tofile(file) #.astype(np.float32).tofile(file)
+        file.write(bytes( np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:])).astype(np.float32) ))
     if Par['velocity']: 
-        np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:],v_cat[0,:]*GADGET,v_cat[1,:]*GADGET,v_cat[2,:]*GADGET)).astype(np.float32).tofile(file)
-    file.close
+        file.write(bytes( np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:],v_cat[0,:]*GADGET,v_cat[1,:]*GADGET,v_cat[2,:]*GADGET)).astype(np.float32) ))
     while not exists(sim_ref['sim_name']):
-        sleep(1)
+        sleep(10)
+        print('error : COVMOS is waiting for',sim_ref['sim_name'],'to be written on disk',flush=1)
     rename(sim_ref['sim_name'],sim_ref['sim_name']+'.data')
     
 def Pk_poles_estimate_detached(Par,sim_ref):
