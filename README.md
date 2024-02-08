@@ -1,18 +1,14 @@
 # COVMOS in a nutshell
 
-COVMOS is a python code designed to simulate in a fast way catalogues of particles in a box of volume V and of redshift z.
-The main advantages of this approximated method are:
+COVMOS is a Python code designed to simulate, in a fast way, catalogues of particles in a box of volume V and of redshift z. The main advantages of this approximated method are:
 
-- the underlying density field can be non-Gaussian, with a probability distribution function (PDF) and a power spectrum set as inputs by the user
-- the nature of the simulated objects (dark matter particles, neutrinos, galaxies, haloes, etc.) is only related to the type of the previous statistical targets set by the user
-- the nature of the simulated cosmological model (lcdm, massive neutrinos, dynamical dark energy, modified gravity models, etc.) is also only related to the type of the previous statistical targets set by the user
-- the simulation of peculiar velocities is characterized by a velocity dispersion related to the local density, thus allowing a reliable reproduction of redshift-space distortions in linear and non-linear regimes
-- can be used to quickly produce covariance matrix of two-point statistics
+- The underlying density field can be non-Gaussian, with a probability distribution function (PDF) and a power spectrum set as inputs by the user.
+- The nature of the simulated objects (dark matter particles, neutrinos, galaxies, haloes, etc.) is only related to the type of the statistical targets previously set by the user.
+- The nature of the simulated cosmological model (ΛCDM, massive neutrinos, dynamical dark energy, modified gravity models, etc.) is also only related to the type of the statistical targets previously set by the user.
+- The simulation of peculiar velocities is characterized by a velocity dispersion related to the local density, thus allowing a reliable reproduction of redshift-space distortions in linear and non-linear regimes.
+- It can be used to quickly produce a covariance matrix of two-point statistics.
 
-The main pipeline lays on the local, non-linear mapping of an initial Gaussian field ν(x) such that δ(x)=L(ν(x)), where the resulting δ-field must represent the cosmological, non-Gaussian contrast density field.
-COVMOS first find out the right power spectrum for ν in such a way that once the Gaussian field is transformed under the local transformation L, the δ variable is both following the targeted power spectrum and PDF set by the user.
-In a second step, the density field is discretised into particles following a local Poisson sampling.
-Then a velocity field following a Gaussian prescription and a power spectrum set by the user is generated. It is finally discretised to assign peculiar velocities to particles.
+The main pipeline relies on the local, non-linear mapping of an initial Gaussian field ν(x) such that δ(x) = L(ν(x)), where the resulting δ-field must represent the cosmological, non-Gaussian contrast density field. COVMOS first finds the right power spectrum for ν in such a way that once the Gaussian field is transformed under the local transformation L, the δ variable follows both the targeted power spectrum and PDF set by the user. In a second step, the density field is discretized into particles following a local Poisson sampling. Then, a velocity field following a Gaussian prescription and a power spectrum set by the user is generated. It is finally discretized to assign peculiar velocities to particles.
 
 
 # Structure of the method
@@ -21,18 +17,18 @@ COVMOS is resumed in one main python code:
 
 **COVMOS.py**
 
-To be run, COVMOS.py needs two key arguments:
+To run COVMOS.py, two essential arguments are needed:
 
-- the COVMOS mode that takes the values 'ini', 'sim' or 'both'
-- the path to a .ini file specifying the project settings, required inputs and outputs (see ./ini_files/setting_example.ini)
+- The COVMOS mode, which can be 'ini', 'sim', or 'both'.
+- The path to an .ini file that specifies the project settings, including required inputs and outputs (refer to ./ini_files/setting_example.ini for an example).
 
-In the 'ini' mode, COVMOS generates the initilization files that will be used for the simulating mode 'sim'. It can be run calling `python COVMOS.py ini path/to/the/inifile.ini` or in parallel (see section 'Parallel computation').
+In 'ini' mode, COVMOS generates the initialization files needed for the simulation mode 'sim'. This mode can be executed by calling `python COVMOS.py ini path/to/the/inifile.ini`, either as a standalone process or in parallel (for details, see the 'Parallel computation' section).
 
-Once done, the 'sim' mode simulates boxes of particles and associated velocities. It can also be run calling `python COVMOS.py sim path/to/the/inifile.ini` or in parallel (see section 'Parallel computation').
+After preparing the initialization files, the 'sim' mode is used to simulate boxes of particles along with their velocities. This mode can also be executed by calling `python COVMOS.py sim path/to/the/inifile.ini` (refer to the 'Parallel computation' section for more information).
 
-You can run the whole pipeline using the 'both' mode: `python COVMOS.py both path/to/the/inifile.ini`
+To execute the entire process in one go, use the 'both' mode with the command: `python COVMOS.py both path/to/the/inifile.ini`.
 
-Several statistical inputs are required when using COVMOS. They must be set by the user in a .ini file. If the user wants COVMOS to clone its own data, several codes are provided to compute these statistical targets in the ./helping_codes folder (see the next section).
+COVMOS requires various statistical inputs, which users must define in an .ini file. For those looking to generate data similar to their own (clones), COVMOS provides several utilities in the ./helping_codes folder to help compute these statistical targets (further details are provided in the following section).
   
 
 # User inputs
