@@ -1,3 +1,6 @@
 [submodule "tools/fast_interp"]
 	path = tools/fast_interp
 	url = https://github.com/dbstein/fast_interp.git
+[submodule "tools/COVMOS/tools/CLASS"]
+	path = tools/COVMOS/tools/CLASS
+	url = https://github.com/lesgourg/class_public.git
