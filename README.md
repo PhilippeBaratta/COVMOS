@@ -37,36 +37,44 @@ The aim of this approximated universe simulation method is to target a small sam
 
 *The density power spectrum*
 
-an ascii file provided by the user. This power spectrum can follow a linear or non-linear prescription, and be associated to arbitrary cosmology and redshift. Moreover the referred objects associated with this power spectrum (dark matter particles, galaxies, etc.) are also arbitrary. Since COVMOS needs to alias this power spectrum, it must be provided by the user deconvolved and unaliased.
-If the user does not provide this file, COVMOS can use [classy](https://github.com/lesgourg/class_public) to compute it. In this case the user must provide the cosmological parameter values associated to classy. Also ./helping_codes/compute_shell_average_monopole.py helps the user computing the monopole of the power spectrum of his own data, using the [NBodyKit](https://github.com/bccp/nbodykit) module. Finally, the user can provide a 3D target power spectrum in a .npy format, in this case convolved and aliased, see ./helping_codes/compute_3D_aliased_Pk.py to estimate it from data (this option offers the best results)
+The density power spectrum is provided by the user as an ASCII file. This power spectrum may adhere to either a linear or non-linear prescription and be associated with arbitrary cosmology and redshift. Furthermore, the objects referred to by this power spectrum (e.g., dark matter particles, galaxies, etc.) are also arbitrary. Since COVMOS requires aliasing this power spectrum, it must be supplied by the user in a deconvolved and unaliased form (the standard form). 
+
+If the user does not provide this file, COVMOS can utilize classy to compute it. In this scenario, the user must provide the cosmological parameter values for [classy](https://github.com/lesgourg/class_public). Additionally, ./helping_codes/compute_shell_average_monopole.py assists the user in computing the monopole of their own data's power spectrum using the [NBodyKit](https://github.com/bccp/nbodykit) module. Alternatively, the user can supply a 3D target power spectrum in .npy format, which in this case should be convolved and aliased. For estimating this from data, see ./helping_codes/compute_3D_aliased_Pk.py (this option offers the best results).
 
 *The theta-theta power spectrum*
 
-an ascii file provided by the user. Two options are proposed here. Either the user provides it or classy (combined to the [Bel et al.](https://www.aanda.org/articles/aa/full_html/2019/02/aa34513-18/aa34513-18.html) fitting functions) computes it.
+The user must provide an ASCII file containing the theta-theta velocity power spectrum. There are two options available:
+
+1. The user directly supplies the theta-theta power spectrum file.
+2. COVMOS, leveraging classy and the fitting functions from [Bel et al.](https://www.aanda.org/articles/aa/full_html/2019/02/aa34513-18/aa34513-18.html), computes the power spectrum.
 
 *The probability distribution function of the contrast density field*
 
-an ascii file provided by the user containing the normalised density probability distribution function. The user can also ask COVMOS to estimate it directly from data provided by the user using ./helping_codes/compute_delta_PDF.py. Note that this PDF must be estimated on the same grid precision as the one of the simulated COVMOS box (same smoothing defined by the quantity L/N_sample, see ./ini_files/setting_example.ini).
+The user needs to provide an ASCII file containing the normalized density probability distribution function (PDF) in a linear binning. Alternatively, COVMOS can estimate this PDF directly from user-provided data using the script located at ./helping_codes/compute_delta_PDF.py. It is crucial that this PDF is estimated using the same grid precision as the simulated COVMOS box. This means the smoothing should be defined by the quantity L/Nsample, as outlined in the example settings file located at ./ini_files/setting_example.ini.
 
 *The one-point velocity variance*
 
-This target statistical quantity must be set by the user. The code ./helping_codes/compute_velocity_rms.py helps the user to estimate it from his own data
+This statistical target quantity must be defined by the user. To facilitate estimation from user's own data, the script ./helping_codes/compute_velocity_rms.py is provided. It assists in calculating the one-point velocity variance, ensuring users can accurately set this parameter based on their dataset.
 
 *The alpha parameter*
 
-alpha is directly linked to the way COVMOS assignes peculiar velocities to particles. The relation velocity variance as a function of the local density field can be approximated by a power law, i.e. Σ^2(ρ) = βρ^α. Either alpha is provided by the user, or COVMOS can estimate it from data provided by the user (using ./helping_codes/compute_alpha.py).
+The alpha parameter plays a crucial role in how COVMOS assigns peculiar velocities to particles. The relationship between velocity variance and the local density field can be approximated by a power law, expressed as Σ^2(ρ) = βρ^α. Users have two options:
 
+1. Provide alpha based on their own theoretical calculation or prior knowledge.
+2. Utilize the provided script ./helping_codes/compute_alpha.py to estimate alpha directly from their data.
+
+This approach allows COVMOS to adapt its velocity assignment process to closely match the user's data characteristics or theoretical model.
 
 # COVMOS outputs
 
-
 *The two-point statistics prediction*
 
-COVMOS is a method that needs several mode-filterings. In this way the output power spectra of the produced catalogues are not exactly matching the targeted ones at small scales (depending on the grid precision). However the impact of these filterings on the output two-point statistics can be analytically computed at a better than the percent accuracy. The user can ask for the prediction of the output two-point correlation functions and power spectra
+COVMOS employs multiple mode-filterings, affecting the output power spectra's match to targeted ones at small scales, dependent on grid precision. However, the impact of these filterings on two-point statistics can be analytically computed with better than one percent accuracy.
+Users can request predictions for the output two-point correlation functions and power spectra.
 
 *The catalogues*
 
-They are the simulated boxes (particle positions and associated velocities). The catalogues are stored in binary files and can easily be loaded using
+The core output includes simulated boxes, detailing particle positions and associated velocities. These catalogues are stored in binary format and can be easily loaded as follows:
 ```
 from tools.COVMOS_func import loadcatalogue
 x,y,z,vx,vy,vz = loadcatalogue(filename,velocity=True)
@@ -74,37 +82,58 @@ x,y,z,vx,vy,vz = loadcatalogue(filename,velocity=True)
 
 *The estimated power spectra*
 
-The multipoles (monopole, quadrupole, hexadecapole) of the power spectrum, both in real and redshift spaces, can be asked by the user. In this case COVMOS will call [NBodyKit](https://github.com/bccp/nbodykit) for the estimation.
+COVMOS allows users to request the multipoles of the power spectrum (monopole, quadrupole, hexadecapole) in both real and redshift spaces. For estimation, it utilizes [NBodyKit](https://github.com/bccp/nbodykit).
 
 *The unbiased covariance*
 
-The COVMOS covariance of the multipoles of the power spectrum is slightly biased at small scales (k ~ 0.2h/Mpc). This bias can be removed applying the method presented in Baratta et al. 22 (in prep) and asked by the user in the .ini file
+At small scales (k ~ 0.2h/Mpc), the COVMOS covariance of the multipoles of the power spectrum exhibits slight bias. This bias can be corrected using the method presented in [Baratta et al. 22](https://www.aanda.org/articles/aa/full_html/2023/05/aa45683-22/aa45683-22.html), which users can request in the .ini file.
 
 # Installation
 
 First, clone the COVMOS repository along with its submodules (class_public and fast_interp) by running the following command:
-`git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git`
+
+```
+git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git
+```
+
 After cloning the repository, navigate into the COVMOS directory and create a new conda environment using the COVMOS-env.yml file provided in the repository:
-`cd COVMOS
-conda env create -f COVMOS-env.yml`
-This command creates a new conda environment with all the dependencies specified in the COVMOS-env.yml file (including the nbodykit code). Once the environment is created, activate it using:
-`conda activate COVMOS-env`
+```
+cd COVMOS
+conda env create -f COVMOS-env.yml
+```
+
+This command creates a new conda environment with all the dependencies specified in the COVMOS-env.yml file (including the NBodyKit code). Once the environment is created, activate it using:
+
+```
+conda activate COVMOS-env
+```
+
 Now, navigate to the CLASS submodule directory to compile the class_public library:
-`cd tools/class_public
-make`
+```
+cd tools/class_public
+make
+```
 
 # Parallel computation
 
-When running on a single node COVMOS.py, a multiprocessing can be exploited thanks to the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library by setting the environment variable OMP_NUM_THREADS to the wanted number of processes.
-Moreover to make the execution faster, the codes can also be run through MPI to share the jobs though nodes.
-To do so, you need to provide a machinefile: a text file that stores the IP addresses of all the nodes in the cluster network. ./machinefiles/machinefile_example1 gives an example of its structure.
-The command is the following:
-`mpiexec -f ./machinefiles/machinefile_example -n 32 python COVMOS.py both setting.ini`
+Single Node Multiprocessing
+
+COVMOS.py supports multiprocessing using the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library. Set the OMP_NUM_THREADS environment variable to the desired number of parallel processes. For example, to use 32 processes:
+`export OMP_NUM_THREADS=32`
+
+Multi-Node Distributed Computing
+
+For larger tasks, COVMOS.py can be run on multiple nodes via MPI. You'll need a machine file listing the cluster nodes' IP addresses (see ./machinefiles/machinefile_example1 for format). Execute the program with:
+
+`mpiexec -f ./machinefiles/machinefile_example -n 100 python COVMOS.py both setting.ini`
+
+Replace 100 with the number of nodes you plan to use.
 
 # References
 
 If you are using COVMOS in a publication, please refer the code by citing the following papers:
 
+```
 @article{Baratta:2019bta,
     author = "Baratta, Philippe and Bel, Julien and Plaszczynski, Stephane and Ealet, Anne",
     title = "{High-precision Monte-Carlo modelling of galaxy distribution}",
@@ -130,6 +159,6 @@ If you are using COVMOS in a publication, please refer the code by citing the fo
     pages = "A1",
     year = "2023"
 }
-
+```
 Also if you used the [classy](https://github.com/lesgourg/class_public) or the [NBodyKit](https://github.com/bccp/nbodykit) modules, you should cite the original works.
 
