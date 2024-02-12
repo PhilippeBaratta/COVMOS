@@ -4,6 +4,7 @@ numpy
 mpi4py
 pyfftw
 numba
+tbb
 
 --> optional
 
