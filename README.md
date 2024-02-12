@@ -127,7 +127,7 @@ For larger tasks, COVMOS.py can be run on multiple nodes via MPI. You'll need a 
 
 `mpiexec -f ./machinefiles/machinefile_example -n 100 python COVMOS.py both setting.ini`
 
-Replace 100 with the number of nodes you plan to use.
+Replace 100 with the number of total treads you plan to use.
 
 # References
 
