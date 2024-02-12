@@ -112,7 +112,6 @@ Now, navigate to the CLASS submodule directory to compile the class_public libra
 ```
 cd tools/class_public
 make
-cd ../cd ..
 ```
 
 # Parallel computation
