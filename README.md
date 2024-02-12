@@ -82,10 +82,16 @@ The COVMOS covariance of the multipoles of the power spectrum is slightly biased
 
 # Installation
 
-When cloning COVMOS to your directory, make sure to pass the option `--recurse-submodules` to the `git clone command`, it will automatically initialize and update one external submodule used by COVMOS, called [fast_interp](https://github.com/dbstein/fast_interp):
+First, clone the COVMOS repository along with its submodules (class_public and fast_interp) by running the following command:
 `git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git`
-
-Moreover, make sure that the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library is already installed on your machine (mandatory), as well as [NBodyKit](https://github.com/bccp/nbodykit) and [classy](https://github.com/lesgourg/class_public) if you want COVMOS to use them (optional).
+After cloning the repository, navigate into the COVMOS directory and create a new conda environment using the COVMOS-env.yml file provided in the repository:
+`cd COVMOS
+conda env create -f COVMOS-env.yml`
+This command creates a new conda environment with all the dependencies specified in the COVMOS-env.yml file (including the nbodykit code). Once the environment is created, activate it using:
+`conda activate COVMOS-env`
+Now, navigate to the CLASS submodule directory to compile the class_public library:
+`cd tools/class_public
+make`
 
 # Parallel computation
 
@@ -97,7 +103,33 @@ The command is the following:
 
 # References
 
-If you are using COVMOS in a publication, please refer the code by citing the following paper:
-(Baratta et al. 22, in prep.)
+If you are using COVMOS in a publication, please refer the code by citing the following papers:
+
+@article{Baratta:2019bta,
+    author = "Baratta, Philippe and Bel, Julien and Plaszczynski, Stephane and Ealet, Anne",
+    title = "{High-precision Monte-Carlo modelling of galaxy distribution}",
+    eprint = "1906.09042",
+    archivePrefix = "arXiv",
+    primaryClass = "astro-ph.CO",
+    doi = "10.1051/0004-6361/201936163",
+    journal = "Astron. Astrophys.",
+    volume = "633",
+    pages = "A26",
+    year = "2020"
+}
+
+@article{Baratta:2022gqd,
+    author = "Baratta, Philippe and Bel, Julien and Gouyou Beauchamps, Sylvain and Carbone, Carmelita",
+    title = "{COVMOS: a new Monte Carlo approach for galaxy clustering analysis}",
+    eprint = "2211.13590",
+    archivePrefix = "arXiv",
+    primaryClass = "astro-ph.CO",
+    doi = "10.1051/0004-6361/202245683",
+    journal = "Astron. Astrophys.",
+    volume = "673",
+    pages = "A1",
+    year = "2023"
+}
+
 Also if you used the [classy](https://github.com/lesgourg/class_public) or the [NBodyKit](https://github.com/bccp/nbodykit) modules, you should cite the original works.
 
