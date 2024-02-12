@@ -108,12 +108,11 @@ dependencies:
   - psutil=5.9.8=py38h01eb140_0
   - pthread-stubs=0.4=h36c2ea0_1001
   - pyerfa=2.0.0=py38h27cfd23_0
-  - pyfftw=0.13.1=py38h7e4f40d_0
   - pysocks=1.7.1=pyha2e5f31_6
   - pytest=8.0.0=pyhd8ed1ab_0
   - python=3.8.18=h955ad1f_0
   - python-dateutil=2.8.2=pyhd8ed1ab_0
-  - python-tzdata=2023.4=pyhd8ed1ab_0
+  - python-tzdata=2024.1=pyhd8ed1ab_0
   - python_abi=3.8=2_cp38
   - pytz=2024.1=pyhd8ed1ab_0
   - pyyaml=6.0.1=py38h01eb140_1
@@ -145,4 +144,6 @@ dependencies:
   - zipp=3.17.0=pyhd8ed1ab_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.5=hfc55251_0
+  - pip:
+      - pyfftw==0.13.1
 prefix: /opt/anaconda3/envs/my_r_env/envs/COVMOS-env
