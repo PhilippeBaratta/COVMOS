@@ -2,3 +2,6 @@
 	path = tools/fast_interp
 	url = https://github.com/dbstein/fast_interp.git
 
+[submodule "tools/class_public"]
+	path = tools/class_public
+	url = https://github.com/lesgourg/class_public.git
