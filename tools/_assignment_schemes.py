@@ -1,5 +1,9 @@
 import numpy as np
 from numba import njit, prange
+import psutil
+import time
+from tools._networking import *
+intracomm = from_globalcomm_to_intranode_comm()
 
 def discrete_assignment(cat,rho_itp,v_itp,non_0_,Nbr,cumu,les_randoms,rho,v_grid,Par,Ary):
     a = Par['a']
@@ -7,9 +11,16 @@ def discrete_assignment(cat,rho_itp,v_itp,non_0_,Nbr,cumu,les_randoms,rho,v_grid
     N_sample = Par['N_sample']
     unit = Par['unit']
     
+    def cpu_usage():
+            return psutil.cpu_percent(interval=2)
+    
     if Par['assign_scheme'] == 'tophat':
         cat,rho_itp,v_itp = discrete_assignment_tophat(cat,rho_itp,v_itp,non_0_,Nbr,cumu,les_randoms,Ary['grid_pos'],a)
     if Par['assign_scheme'] == 'trilinear':
+        
+        while cpu_usage() > 70:
+            time.sleep(5)
+        
         if velocity:
             cat,rho_itp,v_itp = discrete_assignment_trilinear_velocity(cat,rho_itp,v_itp,non_0_,Nbr,cumu,les_randoms,rho,v_grid,Ary['grid_pos'],Ary['vertex'],N_sample,a,unit)
         else:
