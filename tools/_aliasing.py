@@ -98,8 +98,6 @@ def aliasing(density_field,Par,k_1D,k_3D):
                 time_since_start  = (time() - start_time)
                 rmn = (time_since_start * total_loops/ i - time_since_start)/60
                 percent = 100*i/total_loops
-                if Par['verbose'] and rank == 0: 
-                    stdout.write("\restimated remaining time: %.1f minutes, %.0f %%" %(rmn,percent)) ; stdout.flush()
                 i+=1
             
             if Par['verbose'] and rank == 0: print('\n')
