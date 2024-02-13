@@ -543,25 +543,31 @@ def save_ini_files(density_field,velocity_field,Par,PDF_map,k_3D):
     return
 
 def grid_positions(Par):
-    '''
-    stores the position of each grid node in Mpc/h
-    '''
-    grid_pos = np.zeros((3,Par['N_sample']**3),dtype = 'float32')
-    zzz    = np.zeros(Par['grid_shape'],dtype = 'float32')
-    zzz[:] = np.linspace(-Par['L']/2.,Par['L']/2.,Par['N_sample']+1)[:-1]
-    grid_pos[0,:] = zzz.transpose(2,1,0).flatten()
-    grid_pos[1,:] = zzz.transpose(0,2,1).flatten()
-    grid_pos[2,:] = zzz.flatten()
+    """
+    Stores the position of each grid node in Mpc/h.
+    """
+    # Calculate the linearly spaced coordinates along each dimension
+    coords = np.linspace(-Par['L'] / 2., Par['L'] / 2., Par['N_sample'], endpoint=False, dtype='float32')
+    
+    # Generate the 3D grid of positions
+    x, y, z = np.meshgrid(coords, coords, coords, indexing='ij')
+    
+    # Flatten the arrays and stack them to get a 3xN array of positions
+    grid_pos = np.vstack((x.flatten(), y.flatten(), z.flatten()))
+    
     return grid_pos
 
 def compute_vertex_indices(Par):
-    '''
-    stores the flatenned 3D indices of grid nodes
-    '''
-    vertex      = np.zeros((3,Par['N_sample']**3),dtype='int16')
-    kkk         = np.zeros(Par['grid_shape'],dtype='int16')
-    kkk[:]      = np.arange(0,Par['N_sample'])
-    vertex[0,:] = kkk.transpose(2,1,0).flatten()
-    vertex[1,:] = kkk.transpose(0,2,1).flatten()
-    vertex[2,:] = kkk.flatten()
+    """
+    Stores the flattened 3D indices of grid nodes.
+    """
+    # Generate range of indices for each dimension
+    indices = np.arange(Par['N_sample'], dtype='int16')
+    
+    # Create 3D grid of indices
+    ix, iy, iz = np.meshgrid(indices, indices, indices, indexing='ij')
+    
+    # Stack and flatten to get a 3xN array of indices
+    vertex = np.vstack((ix.flatten(), iy.flatten(), iz.flatten()))
+    
     return vertex
