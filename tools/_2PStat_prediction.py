@@ -66,6 +66,7 @@ def compute_2PS_predictions(Par,density_field,PDF_map,k_1D):
         if Par['verbose']: print('applying it to the grid power spectrum to obtain the 3D catalogue power spectrum',flush=True)
             
         Pkpoisson3D = array_times_arraypow2(Pk_target,abs(W0))                                       ; del W0,Pk_target
+        Pkpoisson3D[0,0,0]=0.
         
         if Par['compute_Pk_prediction']: 
             if Par['verbose']: print('shell-average it',flush=True)
