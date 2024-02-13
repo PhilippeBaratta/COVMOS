@@ -8,7 +8,7 @@ from glob import glob
 
 from tools._velocity_model import *
 
-def save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat):
+def save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat,Ary):
     
     if Par['save_catalogue']: save_catalogue_data(Par,tot_obj,cat,v_cat,sim_ref)
     if Par['estimate_Pk_multipoles'] == 'detached' :
@@ -17,6 +17,18 @@ def save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat):
     if Par['estimate_Pk_multipoles'] == 'stopandrun' :
         from tools._Pk_estimate_NBK_attached import Pk_poles_estimate
         Pk_poles_estimate(sim_ref,Par,tot_obj,cat,v_cat)
+    if Par['estimate_Pk_multipoles'] == 'stopandrun_edge' :
+        from tools._Pk_estimate_NBK_attached import Pk_poles_estimate_edge
+        Pk_poles_estimate_edge(sim_ref,Par,tot_obj,cat,v_cat,Ary)
+    if Par['estimate_Pk_multipoles'] == 'stopandrun_SN' :
+        from tools._Pk_estimate_NBK_attached import Pk_poles_estimate_various_SN
+        Pk_poles_estimate_various_SN(sim_ref,Par,tot_obj,cat,v_cat)
+    if Par['estimate_Pk_multipoles'] == 'stopandrun_mask' :
+        from tools._Pk_estimate_NBK_attached import Pk_poles_estimate_mask
+        Pk_poles_estimate_mask(sim_ref,Par,tot_obj,cat,v_cat,Ary)
+    if Par['estimate_Pk_multipoles'] == 'stopandrun_instru' :
+        from tools._Pk_estimate_NBK_attached import Pk_poles_estimate_instru
+        Pk_poles_estimate_instru(sim_ref,Par,tot_obj,cat,v_cat,Ary)
     return         
 
 def save_catalogue_data(Par,tot_obj,cat,v_cat,sim_ref):

@@ -94,7 +94,10 @@ def Mehler(Par,density_field):
             print('the variance defined by the provided PDF is',PDF_map['var_PDF'])
             print('given the integral precision, the Melher expansion returns a maximum value for the 2pcf transformation of', np.amax(PDF_map['Xi_NG_template']))
             print('the corresponding error is', round(100*(np.amax(PDF_map['Xi_NG_template'])/PDF_map['var_PDF']-1),3) ,'percent',flush=True)
-            
+        if round(100*(np.amax(PDF_map['Xi_NG_template'])/PDF_map['var_PDF']-1),3) > 1.5:
+            raise Exception('The precision in the provided PDF file for the density field is not enough, please increase the precision (for example with an interpolation, see helping_codes/compute_delta_PDF.py for the kind of precision requested).')
+
+    
     elif Par['PDF_d_file'] == 'gaussian':
         PDF_map['var_PDF'] = 0.01
         PDF_map['NL_map']  = [None]

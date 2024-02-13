@@ -2,7 +2,7 @@ import numpy as np
 
 def loadcatalogue(filename,velocity=False):
     '''
-    load the positions in Mpc/h and velocities in Mpc/h/(1+z) of a COVMOS catalogue 
+    load the positions in Mpc/h and velocities in km/s/(1+z) of a COVMOS catalogue  
     '''
     myarray = np.fromfile(filename, dtype=np.float32)
     myarray = np.delete(myarray,0)

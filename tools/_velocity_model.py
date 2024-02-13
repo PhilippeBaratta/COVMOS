@@ -1,35 +1,78 @@
 import numpy as np
 from time import sleep
 from os.path import exists as ospe
+from os.path import join as ospj
 from numba import njit, prange
 from mpi4py import MPI
+from glob import glob
 comm = MPI.COMM_WORLD
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+def from_globalcomm_to_intranode_comm():
+    '''
+    generate a mpi communicator between processes sharing the same RAM, usefull when sharing common numpy arrays
+    '''
+    processor_name     = MPI.Get_processor_name()
+    processor_name_all = comm.gather(processor_name, root=0)
+    
+    if rank == 0 :
+        unique = np.unique(processor_name_all)
+    else : unique = None
+    
+    unique = comm.scatter([unique for i in range(size)], root=0)
+    
+    billy_color = np.arange(unique.size)
+    billy_index = np.where(unique==processor_name)[0][0]
+    local_billy = billy_color[billy_index]
+        
+    intracomm = MPI.Comm.Split(comm,local_billy)
+    return intracomm
 
 
 def apply_velocity_model(Par,rho_itp,v_itp):
-    
-    @njit(parallel=True,  cache=True)
-    def apply_velocity_model_ini(rho_itp,rho_0,targeted_rms,v_itp,alpha,folder_saving):
-        delta_plus_one    = rho_itp/rho_0 
-        var_tgt           = targeted_rms**2
-        var_v_itp         = np.var(v_itp)/100**2
-        var_rho_itp_alpha = np.mean(delta_plus_one**alpha)
-        beta              = (var_tgt - var_v_itp)/var_rho_itp_alpha
-        return beta
-    
-    @njit(parallel=True,  cache=True)
-    def apply_velocity_model_4all(rho_itp,rho_0,v_itp,alpha,beta):
-        dispersions    = np.zeros_like(rho_itp)
-        for p in prange(len(rho_itp)):
-            dispersions[p] = np.sqrt(beta*(rho_itp[p]/rho_0)**alpha)
-        return v_itp/100,dispersions
-    
     if Par['velocity']:
         
-        if comm.Get_rank() == 0 and not ospe(Par['folder_beta']+'beta'):
+        intracomm = from_globalcomm_to_intranode_comm() #need node synchronisation! 
+
+        @njit(parallel=True,  cache=True)
+        def apply_velocity_model_ini(rho_itp,rho_0,targeted_rms,v_itp,alpha,folder_saving):
+            delta_plus_one    = rho_itp/rho_0 
+            var_tgt           = targeted_rms**2
+            var_v_itp         = np.var(v_itp)/100**2
+            var_rho_itp_alpha = np.mean(delta_plus_one**alpha)
+            beta              = (var_tgt - var_v_itp)/var_rho_itp_alpha
+            return beta
+
+        @njit(parallel=True,  cache=True)
+        def apply_velocity_model_4all(rho_itp,rho_0,v_itp,alpha,beta):
+            dispersions    = np.zeros_like(rho_itp)
+            for p in prange(len(rho_itp)):
+                dispersions[p] = np.sqrt(beta*(rho_itp[p]/rho_0)**alpha)
+            return v_itp/100,dispersions
+    
+        if not ospe(Par['folder_beta']+'beta'):
             beta = apply_velocity_model_ini(rho_itp,Par['rho_0'],Par['targeted_rms'],v_itp,Par['alpha'],Par['folder_beta'])
-            np.savetxt(Par['folder_beta']+'beta',[beta])
-        while not ospe(Par['folder_beta']+'beta'): sleep(10)
+            np.savetxt(Par['folder_beta']+'beta_rank_%i'%comm.Get_rank(),[beta])
+            comm.Barrier()
+            sleep(1)
+            if comm.Get_rank() == 0:
+                beta_names = glob(ospj(Par['folder_beta'],'*'))
+                beta_all = []
+                for i in range(len(beta_names)):
+                    beta_all.append(np.loadtxt(beta_names[i]))
+                np.savetxt(Par['folder_beta']+'beta',[np.mean(beta)])
+                sleep(2)
+            comm.Barrier()
+            if Par['total_number_of_cat'] >= 1000 :  sleep(intracomm.Get_rank()*180)
+            else :                                   sleep(intracomm.Get_rank()*60)
+            sleep(comm.Get_rank()/2)
+            
+        while not ospe(Par['folder_beta']+'beta'):
+            print('waiting for beta estimate',flush=True)
+            sleep(3)
         beta = np.loadtxt(Par['folder_beta']+'beta')
         v_itp,dispersions = apply_velocity_model_4all(rho_itp,Par['rho_0'],v_itp,Par['alpha'],beta)
         v_cat             = np.random.normal(v_itp,dispersions)

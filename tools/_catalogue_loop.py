@@ -42,7 +42,7 @@ def generate_analyse_catalogues(Par,Ary):
     if number_in_folder < Par['total_number_of_cat'] : 
         if Par['total_number_of_cat'] >= 1000 :  sleep(intracomm.Get_rank()*180)
         else :                                   sleep(intracomm.Get_rank()*60)
-    sleep(comm.Get_rank()*2)
+    #sleep(comm.Get_rank()*2)
     if Par['verbose'] and rank == 0: print('\n_____________________________ START CATALOGUES SIMULATION ____________________________\n',flush=True)
     while number_in_folder < Par['total_number_of_cat']:
         if Par['verbose'] and rank == 0:  stdout.write("\rloop on catalogues: %i / %i, %i%%" %(number_in_folder,Par['total_number_of_cat'],(number_in_folder/Par['total_number_of_cat'])*100)) ; stdout.flush()
@@ -93,7 +93,7 @@ def generate_analyse_catalogues(Par,Ary):
             rdm_spl = np.random.random((3,tot_obj))
             cat,rho_itp,v_itp = discrete_assignment(cat,rho_itp,v_itp,non_0_,Nbr,cumu,rdm_spl,rho,v_grid,Par,Ary) ; del rdm_spl,v_grid,cumu,Nbr,rho,non_0_
             v_cat = apply_velocity_model(Par,rho_itp,v_itp)                                               ; del rho_itp,v_itp
-            save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat)                                        ; del cat,v_cat
+            save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat,Ary)                                    ; del cat,v_cat
 
         number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
     comm.Barrier()

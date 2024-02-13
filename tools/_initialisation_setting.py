@@ -178,8 +178,8 @@ def read_parameters(inifile,mode):
     
     Par['estimate_Pk_multipoles']  = config.get(var_type, 'estimate_Pk_multipoles')
     if Par['estimate_Pk_multipoles'] == 'False': Par['estimate_Pk_multipoles'] = False
-    if not (Par['estimate_Pk_multipoles'] == 'stopandrun' or Par['estimate_Pk_multipoles'] == 'detached' or Par['estimate_Pk_multipoles'] == False):
-        raise Exception('the estimate_Pk_multipoles parameter must be set to stopandrun or detached or False')
+    if not (Par['estimate_Pk_multipoles'] == 'stopandrun' or Par['estimate_Pk_multipoles'] == 'detached' or Par['estimate_Pk_multipoles'] == False or Par['estimate_Pk_multipoles'] == 'stopandrun_edge' or Par['estimate_Pk_multipoles'] == 'stopandrun_mask' or Par['estimate_Pk_multipoles'] == 'stopandrun_instru' or Par['estimate_Pk_multipoles'] == 'stopandrun_SN') :
+        raise Exception('the estimate_Pk_multipoles parameter must be set to stopandrun or detached or False (or additionally the unstable versions of stopandrun_edge or stopandrun_mask or stopandrun_instru)')
     
     Par['save_catalogue']     = config.getboolean(var_type, 'save_catalogue')
     Par['verbose']            = config.getboolean(var_type, 'verbose')
@@ -395,7 +395,7 @@ def loading_ini_files(Par,mode):
         #if ('non linear' in Par['classy_dict']):
         Pk_tt_theo1d = Pk_tt_lin * np.exp(- Pk_1D_dd_lin[0] * (a1+a2*Pk_1D_dd_lin[0]+a3*Pk_1D_dd_lin[0]**2)) #non linear thetha-theta power spectrum
         #else:
-        #    Pk_tt_theo1d = Pk_tt_lin
+        #Pk_tt_theo1d = Pk_tt_lin
         return np.vstack((Pk_1D_dd_lin[0],Pk_tt_theo1d))
     
     if mode == 'ini':                         
@@ -462,7 +462,37 @@ def loading_ini_files(Par,mode):
             Ary['vertex'] = sharing_array_throw_MPI((3,Par['N_sample']**3),intracomm,'int16')
             if intracomm.rank == 0: Ary['vertex'][:,:] = compute_vertex_indices(Par)
         else: Ary['vertex'] = np.array([],dtype=np.int16)
-            
+
+        if Par['estimate_Pk_multipoles'] == 'stopandrun_edge':
+            if rank == 0: 
+                
+                Ns  = 512
+                k_F = 2*np.pi/1000
+                ref         = np.arange(Ns)
+                norm_1d     = np.concatenate((ref[ref<Ns/2] *k_F,(ref[ref >= Ns/2] - Ns)*k_F))
+                
+                k_3D,_ = Fouriermodes(Par)
+                
+                yes = np.full((512,512,512), False)
+                yes[:,:,1:256] = True
+                yes[:256,:,0] = True
+                yes[0,256:,0] = False
+                
+                def take_1000_k3d_in_shell(number,norm_1d,k_F,k_3D,yes): #32, 48, 64, 80
+                    trues = (k_3D > norm_1d[number] - k_F/2) * (k_3D < norm_1d[number] + k_F/2 )
+                    
+                    where_shell = np.where(yes*trues==True)
+                    indices = np.arange(where_shell[0].size)
+                    index_random = np.random.choice(indices,1000,replace=False)
+                    trues_1000 = (where_shell[0][index_random],where_shell[1][index_random],where_shell[2][index_random])
+                    return k_3D[trues_1000], trues_1000
+
+                k_3D_32, ind_32 = take_1000_k3d_in_shell(32,norm_1d,k_F,k_3D,yes)
+                k_3D_48, ind_48 = take_1000_k3d_in_shell(48,norm_1d,k_F,k_3D,yes)
+                k_3D_64, ind_64 = take_1000_k3d_in_shell(64,norm_1d,k_F,k_3D,yes)
+                k_3D_80, ind_80 = take_1000_k3d_in_shell(80,norm_1d,k_F,k_3D,yes)
+                
+                np.savez(Par['folder_saving']+'indices_edge',k_3D_32, ind_32, k_3D_48, ind_48, k_3D_64, ind_64, k_3D_80, ind_80)
         return Ary
         
                                 
