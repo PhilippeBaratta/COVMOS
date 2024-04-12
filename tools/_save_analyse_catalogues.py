@@ -5,6 +5,8 @@ import subprocess
 import socket
 from time import sleep
 from glob import glob
+import os
+import sys
 
 from tools._velocity_model import *
 
@@ -55,7 +57,22 @@ def Pk_poles_estimate_detached(Par,sim_ref):
     Pk_file     = Par['file_Pk']
     Pk_RSD_file = Par['file_Pk_RSD']
     dir_path = dirname(realpath(__file__))
-    pid = subprocess.Popen(['ssh', '-o', 'StrictHostKeyChecking=no',socket.gethostname(),'python','-W','ignore',dir_path+'/_Pk_estimate_NBK_detached.py',filename,str(RSD),str(redshift),str(L),str(savecat),str(Omega_m),str(number_ref),str(Pk_file),str(Pk_RSD_file),'-c','&'],shell=False,stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+    python_path = sys.executable
+    #print(python_path, '-W', 'ignore',dir_path+'/_Pk_estimate_NBK_detached.py',filename,str(RSD),str(redshift),str(L),str(savecat),str(Omega_m),str(number_ref),str(Pk_file),str(Pk_RSD_file))
+    command = ['mpiexec', '-n', '1', python_path, '-W', 'ignore',dir_path+'/_Pk_estimate_NBK_detached.py',filename,str(RSD),str(redshift),str(L),str(savecat),str(Omega_m),str(number_ref),str(Pk_file),str(Pk_RSD_file)]
+    # Launch the subprocess
+    process = subprocess.Popen(
+        command, 
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE, 
+        start_new_session=True,
+        env=os.environ.copy()  # Pass all environment variables
+    )    
+    stdout, stderr = process.communicate()
+
+    #print("STDOUT:", stdout.decode())
+    #print("STDERR:", stderr.decode())
     return
 
 def regroup_Pks(Par):
