@@ -162,3 +162,4 @@ If you are using COVMOS in a publication, please refer the code by citing the fo
 ```
 Also if you used the [classy](https://github.com/lesgourg/class_public) or the [NBodyKit](https://github.com/bccp/nbodykit) modules, you should cite the original works.
 
+Any question? Please contact me at philippe.baratta@univ-amu.fr
