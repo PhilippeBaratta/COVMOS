@@ -9,7 +9,7 @@ def Pk_poles_estimate(sim_ref,Par,tot_obj,cat,v_cat):
     singlecomm = MPI.COMM_SELF # compute on a single thread without MPI
     def save_Pk_in_right_way(Pknbk,RSD_here,filename,L,Par,sim_ref):
         poles = Pknbk.poles
-        nk      = int(256/2 - 1)
+        nk      = int(512/2 - 1)
         k_new   = np.zeros(nk-1)
         num_new = np.zeros(nk-1)
         Pk_new  = np.zeros((nk-1)*len((0,2,4)))
@@ -33,7 +33,7 @@ def Pk_poles_estimate(sim_ref,Par,tot_obj,cat,v_cat):
     data = np.empty(tot_obj, dtype=[('Position', (np.float32, 3))])
     data['Position'][:,0] = cat[0,:] ; data['Position'][:,1] = cat[1,:] ; data['Position'][:,2] = cat[2,:]
     f = ArrayCatalog({'Position' : data['Position']},comm=singlecomm) ; del data
-    mesh_comov = f.to_mesh(Nmesh=256,BoxSize=Par['L'],dtype=np.float32,interlaced=True,compensated=True,resampler='pcs',position='Position') ; del f
+    mesh_comov = f.to_mesh(Nmesh=512,BoxSize=Par['L'],dtype=np.float32,interlaced=True,compensated=True,resampler='pcs',position='Position') ; del f
 
     #redshift space
     if Par['velocity']:
@@ -43,7 +43,7 @@ def Pk_poles_estimate(sim_ref,Par,tot_obj,cat,v_cat):
         data = np.empty(tot_obj, dtype=[('Position', (np.float32, 3))])
         data['Position'][:,0] = cat[0,:] ; data['Position'][:,1] = cat[1,:] ; data['Position'][:,2] = cat[2,:]
         f = ArrayCatalog({'Position' : data['Position']},comm=singlecomm) ; del data
-        mesh_redshift = f.to_mesh(Nmesh=256,BoxSize=Par['L'],dtype=np.float32,interlaced=True,compensated=True,resampler='pcs',position='Position') ; del f
+        mesh_redshift = f.to_mesh(Nmesh=512,BoxSize=Par['L'],dtype=np.float32,interlaced=True,compensated=True,resampler='pcs',position='Position') ; del f
 
     #comobile PK        
     Pknbk_comob = FFTPower(mesh_comov, mode='2d', poles = (0,2,4), dk=0, kmin=2*np.pi/Par['L']) ; del mesh_comov
