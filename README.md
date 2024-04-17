@@ -101,6 +101,7 @@ After cloning the repository, navigate into the COVMOS directory and create a ne
 cd COVMOS
 conda env create -f COVMOS-env.yml
 ```
+(/!\ Note that there is currently an issue with this environment. New environment is under construction. Please contact me for any question.)
 
 This command creates a new conda environment with all the dependencies specified in the COVMOS-env.yml file (including the NBodyKit code). Once the environment is created, activate it using:
 
