@@ -23,7 +23,7 @@ def Pk_poles_estimate(sim_ref,Par,tot_obj,cat,v_cat):
                     Pk_new[int(np.floor((norm-kF/2.)/kF)) + (nk-1)*p] += poles['power_'+str((0,2,4)[p])][i].real*poles['modes'][i]/2.
         k_new /= num_new
         for p in range(len((0,2,4))): Pk_new[p*k_new.size : k_new.size*(p+1)] /= num_new
-        #Pk_new[0 : k_new.size] -= poles.attrs['shotnoise']
+        Pk_new[0 : k_new.size] -= poles.attrs['shotnoise']
         if RSD_here : basename = Par['file_Pk_RSD']
         else        : basename = Par['file_Pk']
         np.savetxt(basename+sim_ref['number'],np.transpose(np.vstack((k_new,np.ones(len(k_new))*tot_obj,Pk_new[0 : k_new.size]/(2*np.pi)**3,Pk_new[k_new.size : k_new.size*2]/(2*np.pi)**3,Pk_new[k_new.size*2 : k_new.size*3]/(2*np.pi)**3))))
