@@ -1,15 +1,1 @@
-name: COVMOS-env
-channels:
-  - conda-forge
-  - defaults
-  - bccp
-dependencies:
-  - python=3.6
-  - nbodykit
-  - numba
-  - pyfftw
-  - scipy
-  - cython
-  - jupyter
-  - tbb
-  - pyarrow
+
