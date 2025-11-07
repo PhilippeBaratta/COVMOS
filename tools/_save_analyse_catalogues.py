@@ -1,5 +1,4 @@
 import numpy as np
-from os import rename
 from os.path import dirname,realpath,exists,join
 import subprocess
 import socket
