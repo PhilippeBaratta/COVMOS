@@ -88,49 +88,71 @@ COVMOS allows users to request the multipoles of the power spectrum (monopole, q
 
 At small scales (k ~ 0.2h/Mpc), the COVMOS covariance of the multipoles of the power spectrum exhibits slight bias. This bias can be corrected using the method presented in [Baratta et al. 22](https://www.aanda.org/articles/aa/full_html/2023/05/aa45683-22/aa45683-22.html), which users can request in the .ini file.
 
-# Installation
 
-First, clone the COVMOS repository along with its submodules (class_public and fast_interp) by running the following command:
 
+## Installation
+
+**Prerequisites:** Linux/macOS with `wget`, `unzip`, `make`, `gcc` (or clang), and MPI if you plan to run distributed jobs.
+
+1. **Clone the repository (with submodules):**
+
+   ```bash
+   git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git
+   cd COVMOS
+   ```
+
+2. **Download the prebuilt environment from Zenodo (1.24 GB):**
+
+   ```bash
+   wget "https://zenodo.org/record/17551945/files/COVMOS-env.zip?download=1" -O COVMOS-env.zip
+   ```
+
+3. **Unzip and remove the archive:**
+
+   ```bash
+   unzip COVMOS-env.zip
+   rm COVMOS-env.zip
+   ```
+
+   This extracts a self-contained environment folder `COVMOS-env/` that already includes all required packages and pinned versions.
+
+4. **Build CLASS (submodule):**
+
+   ```bash
+   cd tools/class_public
+   make
+   cd ../../
+   ```
+
+### How to run COVMOS with the bundled Python
+
+You do **not** need to “activate” anything: simply call the Python interpreter from the bundled environment when running COVMOS.
+
+**Single process example:**
+
+```bash
+./COVMOS-env/bin/python3 COVMOS.py both ./ini_files/setting_example.ini
 ```
-git clone --recurse-submodules https://github.com/PhilippeBaratta/COVMOS.git
+
+**MPI example (4 ranks):**
+
+```bash
+mpiexec -n 4 ./COVMOS-env/bin/python3 COVMOS.py both ./ini_files/setting_example.ini
 ```
 
-After cloning the repository, navigate into the COVMOS directory and create a new conda environment using the COVMOS-env.yml file provided in the repository:
-```
-cd COVMOS
-conda env create -f COVMOS-env.yml
-```
-or faster using mamba (need to be installed first) using 
-```
-mamba env create -f COVMOS-env.yml
-```
-Thes command creates a new conda environment with all the dependencies specified in the COVMOS-env.yml file (including the NBodyKit code). Once the environment is created, activate it using:
+If your environment was extracted elsewhere, provide the absolute path to its Python:
 
-```
-conda activate COVMOS-env
+```bash
+mpiexec -n 4 '/path/to/COVMOS-env/bin/python3' COVMOS.py both initialisation.ini
 ```
 
-Now, navigate to the CLASS submodule directory to compile the class_public library:
-```
-cd tools/class_public
-make
-```
-
-# Parallel computation
-
-Single Node Multiprocessing
-
-COVMOS.py supports multiprocessing using the [numba](https://numba.pydata.org/numba-doc/latest/index.html) library. Set the OMP_NUM_THREADS environment variable to the desired number of parallel processes. For example, to use 32 processes:
-`export OMP_NUM_THREADS=32`
-
-Multi-Node Distributed Computing
-
-For larger tasks, COVMOS.py can be run on multiple nodes via MPI. You'll need a machine file listing the cluster nodes' IP addresses (see ./machinefiles/machinefile_example1 for format). Execute the program with:
-
-`mpiexec -f ./machinefiles/machinefile_example -n 100 python COVMOS.py both setting.ini`
-
-Replace 100 with the number of total treads you plan to use.
+> Tip: for convenience, you can define an environment variable in your shell:
+>
+> ```bash
+> export COVMOS_PY="$(pwd)/COVMOS-env/bin/python3"
+> $COVMOS_PY COVMOS.py both ./ini_files/setting_example.ini
+> mpiexec -n 4 $COVMOS_PY COVMOS.py both ./ini_files/setting_example.ini
+> ```
 
 # References
 
