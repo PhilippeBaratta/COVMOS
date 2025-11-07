@@ -1,5 +1,4 @@
 import numpy as np
-from os import rename
 from os.path import dirname,realpath,exists,join
 import subprocess
 import socket
@@ -33,18 +32,48 @@ def save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat,Ary):
         Pk_poles_estimate_instru(sim_ref,Par,tot_obj,cat,v_cat,Ary)
     return         
 
-def save_catalogue_data(Par,tot_obj,cat,v_cat,sim_ref):
-    GADGET = 100*np.sqrt(1+Par['redshift'])
-    file = open(sim_ref['sim_name'], mode='wb')
-    
-    if not Par['velocity']: 
-        file.write(bytes( np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:])).astype(np.float32) ))
-    if Par['velocity']: 
-        file.write(bytes( np.concatenate(([tot_obj],cat[0,:],cat[1,:],cat[2,:],v_cat[0,:]*GADGET,v_cat[1,:]*GADGET,v_cat[2,:]*GADGET)).astype(np.float32) ))
+def save_catalogue_data(Par,tot_obj,cat, v_cat, sim_ref):
+    GADGET = 100 * np.sqrt(1 + Par['redshift'])
+
+    # ensure the file is closed before renaming
+    with open(sim_ref['sim_name'], mode='wb') as fh:
+        if not Par['velocity']:
+            fh.write(
+                bytes(
+                    np.concatenate(
+                        ([tot_obj], cat[0, :], cat[1, :], cat[2, :])
+                    ).astype(np.float32)
+                )
+            )
+        else:
+            fh.write(
+                bytes(
+                    np.concatenate(
+                        (
+                            [tot_obj],
+                            cat[0, :],
+                            cat[1, :],
+                            cat[2, :],
+                            v_cat[0, :] * GADGET,
+                            v_cat[1, :] * GADGET,
+                            v_cat[2, :] * GADGET,
+                        )
+                    ).astype(np.float32)
+                )
+            )
+
+        fh.flush()
+        os.fsync(fh.fileno())
+
     while not exists(sim_ref['sim_name']):
         sleep(10)
-        print('error : COVMOS is waiting for',sim_ref['sim_name'],'to be written on disk',flush=1)
-    rename(sim_ref['sim_name'],sim_ref['sim_name']+'.data')
+        print(
+            'error : COVMOS is waiting for',
+            sim_ref['sim_name'],
+            'to be written on disk',
+            flush=1,
+        )
+    os.replace(sim_ref['sim_name'], sim_ref['sim_name'] + '.data')
     
 def Pk_poles_estimate_detached(Par,sim_ref):
     filename = sim_ref['sim_name']+'.data'
