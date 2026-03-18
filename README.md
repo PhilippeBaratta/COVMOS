@@ -114,14 +114,6 @@ For a given axis, if you want the observer to be at a distance `d` from one face
 - from the lower face (`x = -L/2`): `xo = -L/2 + d`,
 - from the upper face (`x = +L/2`): `xo = +L/2 - d`.
 
-**Example (`L = 1000 Mpc/h`)**  
-Then faces are at `x = -500` and `x = +500`.
-
-- If you want the observer to be exactly `500 Mpc/h` from the `x = -500` face, use `xo = 0`.
-- If you want `500 Mpc/h` from the `x = +500` face, use `xo = 0` as well.
-
-So in that specific example, the observer is at the box centre along `x`.
-
 ### What COVMOS does in shell mode
 
 For each realisation:
