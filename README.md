@@ -88,6 +88,91 @@ COVMOS allows users to request the multipoles of the power spectrum (monopole, q
 
 At small scales (k ~ 0.2h/Mpc), the COVMOS covariance of the multipoles of the power spectrum exhibits slight bias. This bias can be corrected using the method presented in [Baratta et al. 22](https://www.aanda.org/articles/aa/full_html/2023/05/aa45683-22/aa45683-22.html), which users can request in the .ini file.
 
+## Shell mode (light-cone shell reconstruction workflow)
+
+COVMOS can also be used to generate many realisations of one radial shell (instead of keeping the full box), which is useful for light-cone reconstruction in post-processing.
+
+### New optional INI parameters (`[CATALOGUE_SETTINGS]`)
+
+Add the following parameters in your `.ini` file:
+
+- `xo`, `yo`, `zo`: observer position in box coordinates (Mpc/h),
+- `r_min`, `r_max`: shell bounds in Mpc/h,
+- `shell_seed_base`: base integer seed for deterministic shell realisations (you can set `0`).
+
+If these shell parameters are provided, COVMOS activates shell mode for the simulation run.
+
+### Coordinate convention for `xo`, `yo`, `zo`
+
+The coordinates are defined in the same frame as the COVMOS grid nodes:
+
+- the box centre is at `(0, 0, 0)`,
+- therefore `xo`, `yo`, `zo` are not measured from a corner, but from the box centre.
+
+For a given axis, if you want the observer to be at a distance `d` from one face:
+
+- from the lower face (`x = -L/2`): `xo = -L/2 + d`,
+- from the upper face (`x = +L/2`): `xo = +L/2 - d`.
+
+**Example (`L = 1000 Mpc/h`)**  
+Then faces are at `x = -500` and `x = +500`.
+
+- If you want the observer to be exactly `500 Mpc/h` from the `x = -500` face, use `xo = 0`.
+- If you want `500 Mpc/h` from the `x = +500` face, use `xo = 0` as well.
+
+So in that specific example, the observer is at the box centre along `x`.
+
+### What COVMOS does in shell mode
+
+For each realisation:
+
+1. COVMOS builds the field and Poisson counts as usual.
+2. It applies a permissive grid mask around the shell limits (to avoid removing relevant cells too early).
+3. It assigns particle positions (and velocities if requested).
+4. It applies a final exact radial cut and saves only particles with `r_min <= r <= r_max`.
+
+So one COVMOS project in shell mode corresponds to:
+- many realisations,
+- of one single shell definition (`xo, yo, zo, r_min, r_max`).
+
+### Deterministic catalogue-to-seed mapping across shell projects
+
+In shell mode, catalogue index `i` always uses the same seed:
+
+`seed(i) = shell_seed_base + (i - 1)`
+
+This means if you run multiple shell projects (different `r_min/r_max` bins) with the same `shell_seed_base`, then:
+
+- catalogue `i` of shell 1,
+- catalogue `i` of shell 2,
+- catalogue `i` of shell 3, ...
+
+all share the same Gaussian initial random seed for realisation `i`.
+
+This is the key requirement for consistent light-cone recombination by catalogue index.
+
+### Practical user workflow for light-cone reconstruction
+
+1. Choose your redshift range (`z_min`, `z_max`) externally.
+2. Split it into radial bins and convert to shell limits (`r_min`, `r_max`) with your cosmology.
+3. Create one INI/project per shell (same global settings, different `r_min/r_max`, same `shell_seed_base`).
+4. Run COVMOS on each project with the same number of realisations.
+5. In post-processing, build each light-cone realisation by concatenating matching catalogue indices across shells:
+   - LC realisation 1 = shell1/catalogue1 + shell2/catalogue1 + ...
+   - LC realisation 2 = shell1/catalogue2 + shell2/catalogue2 + ...
+   - etc.
+
+### Additional shell-mode output: `|delta_k|^2`
+
+In shell mode, COVMOS also creates:
+
+- `outputs_sim/delta_k2/`
+
+with one 3D file per realisation:
+
+- `delta_k2_<simulation_number>.npy`
+
+This stores the Fourier amplitude squared grid `|delta_k|^2` for the non-Gaussian density field of that realisation.
 
 
 ## Installation
