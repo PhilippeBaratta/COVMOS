@@ -30,6 +30,16 @@ from tools._assignment_schemes import *
 from tools._COVMOS_covariance import *
 from tools.fast_interp.fast_interp.fast_interp import interp1d
 
+def shell_seed_from_number(Par,number):
+    return int(Par['shell_seed_base'] + number - 1)
+
+def shell_particle_filter(cat,v_cat,Par):
+    observer = np.array([Par['xo'],Par['yo'],Par['zo']],dtype=np.float32).reshape(3,1)
+    rr = np.sqrt(np.sum((cat - observer)**2,axis=0))
+    in_shell = (rr >= Par['r_min']) * (rr <= Par['r_max'])
+    if Par['velocity']:
+        return cat[:,in_shell],v_cat[:,in_shell]
+    return cat[:,in_shell],v_cat
 
 def generate_analyse_catalogues(Par,Ary):
     if not Par['PDF_d_file'] == 'gaussian':
@@ -50,8 +60,14 @@ def generate_analyse_catalogues(Par,Ary):
         sim_ref = find_a_sim_number_to_run(Par)
         if not osp.exists(sim_ref['job_name']):
             np.savetxt(sim_ref['job_name'],[1])
-            if Par['fixed_Rdm_seed'] : np.random.seed(0)
-            else                     : np.random.seed()
+            
+            if Par['fixed_Rdm_seed']:
+                np.random.seed(0)
+            elif Par['shell_mode']:
+                np.random.seed(shell_seed_from_number(Par,sim_ref['int_number']))
+            else:
+                np.random.seed()
+
 
             v_grid = np.array([],dtype=np.float32) ; rho_itp = np.array([],dtype=np.float64) ; v_itp = np.array([],dtype=np.float32)
 
@@ -75,7 +91,14 @@ def generate_analyse_catalogues(Par,Ary):
             real1[:,:,:]    = FFTw.interfaces.numpy_fft.ifftn(complex1,axes=(0,1,2))                      ; del complex1  
             if not Par['PDF_d_file'] == 'gaussian':
                 real1[:,:,:] = mapping(real1)
-                
+
+            if Par['shell_mode']:
+                delta_k_shell = FFTw.interfaces.numpy_fft.fftn(real1,axes=(0,1,2))
+                delta_k2_shell = np.abs(delta_k_shell)**2
+                np.save(Par['folder_delta_k2'] + 'delta_k2_' + str(sim_ref['int_number']),delta_k2_shell.astype(np.float32))
+                del delta_k_shell,delta_k2_shell
+
+        
             if Par['assign_scheme'] == 'tophat':  
                 rho = from_delta_to_rho_times_a3(real1,Par['rho_0']*Par['a']**3)                          ; del real1
                 Nbr = np.random.poisson(rho).astype(np.int32).flatten()
@@ -84,7 +107,10 @@ def generate_analyse_catalogues(Par,Ary):
             if Par['assign_scheme'] == 'trilinear':
                 rho,rho_mean_times_a3 = mean_delta_times_a3(real1,Par['a']**3,Par['rho_0'])               ; del real1
                 Nbr = np.random.poisson(rho_mean_times_a3).astype(np.int32).flatten()                     ; del rho_mean_times_a3
-            
+
+            if Par['shell_mode']:
+                Nbr *= Ary['shell_mask_grid']
+
             non_0_  = (np.where(Nbr!=0)[0]).astype(np.int32) ; tot_obj = np.sum(Nbr) ; cumu = np.insert(np.cumsum(Nbr),0,0).astype(np.int32)
             rho_itp = np.zeros(tot_obj,dtype='float32')
             cat     = np.zeros((3,tot_obj),dtype='float32')
@@ -93,6 +119,10 @@ def generate_analyse_catalogues(Par,Ary):
             rdm_spl = np.random.random((3,tot_obj))
             cat,rho_itp,v_itp = discrete_assignment(cat,rho_itp,v_itp,non_0_,Nbr,cumu,rdm_spl,rho,v_grid,Par,Ary) ; del rdm_spl,v_grid,cumu,Nbr,rho,non_0_
             v_cat = apply_velocity_model(Par,rho_itp,v_itp)                                               ; del rho_itp,v_itp
+            if Par['shell_mode']:
+                cat,v_cat = shell_particle_filter(cat,v_cat,Par)
+                tot_obj = cat.shape[1]
+
             save_and_or_analyse_cat(Par,sim_ref,tot_obj,cat,v_cat,Ary)                                    ; del cat,v_cat
 
         number_in_folder = len(glob(osp.join(Par['folder_job'], '*')))
@@ -118,4 +148,5 @@ def find_a_sim_number_to_run(Par):
     sim_ref['sim_name'] = Par['file_sim']+'_%i'%ramdom_sim
     sim_ref['job_name'] = Par['folder_job']+'_%i'%ramdom_sim
     sim_ref['number']   = '_%i'%ramdom_sim
+    sim_ref['int_number'] = ramdom_sim
     return sim_ref    

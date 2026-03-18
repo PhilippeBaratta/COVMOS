@@ -62,7 +62,39 @@ def read_parameters(inifile,mode):
         raise Exception('you must choose the assign_scheme parameter between tophat or trilinear, please correct the ini file')
     
     Par['fixed_Rdm_seed'] = config.getboolean(var_type, 'fixed_Rdm_seed')
-    
+
+    Par['shell_mode'] = False
+    try:
+        shell_r_min = config.get(var_type, 'r_min')
+        shell_r_max = config.get(var_type, 'r_max')
+        shell_xo = config.get(var_type, 'xo')
+        shell_yo = config.get(var_type, 'yo')
+        shell_zo = config.get(var_type, 'zo')
+    except:
+        shell_r_min = shell_r_max = shell_xo = shell_yo = shell_zo = None
+
+    if shell_r_min is not None:
+        if shell_r_min.strip() == '' or shell_r_max.strip() == '' or shell_xo.strip() == '' or shell_yo.strip() == '' or shell_zo.strip() == '':
+            raise Exception('if one shell parameter (xo,yo,zo,r_min,r_max) is provided, all of them must be provided and non-empty')
+        try:
+            Par['r_min'] = float(shell_r_min)
+            Par['r_max'] = float(shell_r_max)
+            Par['xo'] = float(shell_xo)
+            Par['yo'] = float(shell_yo)
+            Par['zo'] = float(shell_zo)
+        except:
+            raise Exception('shell parameters (xo,yo,zo,r_min,r_max) must be floats, please correct the ini file')
+        if Par['r_min'] < 0:
+            raise Exception('the r_min parameter must be >= 0, please correct the ini file')
+        if Par['r_max'] <= Par['r_min']:
+            raise Exception('the r_max parameter must be > r_min, please correct the ini file')
+        Par['shell_mode'] = True
+
+    try:
+        Par['shell_seed_base'] = config.getint(var_type, 'shell_seed_base')
+    except:
+        Par['shell_seed_base'] = 0
+ 
     try: Par['L'] = config.getfloat(var_type, 'L')
     except: raise Exception('the L parameter must be an integer or a float, please correct the ini file')
     if Par['L'] <= 0 : raise Exception('the L parameter must be > 0, please correct the ini file')
@@ -192,7 +224,8 @@ def read_parameters(inifile,mode):
     if Par['aliasing_order'] == 'Default' and not Par['Pk_dd_file'][-4:] == '.npy': Par['aliasing_order'] = 1
     
     if Par['project_name'] == '' or Par['project_name'] == "''":
-        Par['project_name'] = 'COVMOS_' + 'Ns' + str(Par['N_sample']) + '_L' + str(Par['L']) + '_z' + str(Par['redshift']) + '_rho' + str(Par['rho_0']) + '_Om' + str(Par['Omega_m']) + '_' + Par['assign_scheme'] + '_scheme' + (not Par['Pk_dd_file'][-4:] == '.npy') * ('_aliasOrd' + str(Par['aliasing_order'])) + Par['velocity'] * ('_alpha' + str(Par['alpha']) + '_Vrms' + str(Par['targeted_rms'])) + Par['fixed_Rdm_seed'] * '_fixed_Rdm_seed' + (Par['PDF_d_file'] == 'gaussian') * '_gaussianPDF'
+        Par['project_name'] = 'COVMOS_' + 'Ns' + str(Par['N_sample']) + '_L' + str(Par['L']) + '_z' + str(Par['redshift']) + '_rho' + str(Par['rho_0']) + '_Om' + str(Par['Omega_m']) + '_' + Par['assign_scheme'] + '_scheme' + (not Par['Pk_dd_file'][-4:] == '.npy') * ('_aliasOrd' + str(Par['aliasing_order'])) + Par['velocity'] * ('_alpha' + str(Par['alpha']) + '_Vrms' + str(Par['targeted_rms'])) + Par['fixed_Rdm_seed'] * '_fixed_Rdm_seed' + (Par['PDF_d_file'] == 'gaussian') * '_gaussianPDF' + Par['shell_mode'] * ('_shell_rmin' + str(Par['r_min']) + '_rmax' + str(Par['r_max']))
+
     
     Par['output_dir_project'] = Par['output_dir'] + (not Par['output_dir'][-1]=='/')*'/' + Par['project_name']
     Par['output_ini_file'] = Par['output_dir_project'] + '/ini_files/ini_file'
@@ -212,7 +245,8 @@ def read_parameters(inifile,mode):
         
         Par['folder_sim']    = Par['folder_saving'] + 'COVMOS_catalogues/'
         Par['file_sim']      = Par['folder_sim']    + 'COVMOS_catalogue'
-        
+
+        Par['folder_delta_k2'] = Par['folder_saving'] + 'delta_k2/'
         Par['folder_Pk']     = Par['folder_saving'] + 'Pk/'
         Par['folder_Pk_RSD'] = Par['folder_saving'] + 'Pk_RSD/'
         Par['folder_cov']    = Par['folder_saving'] + 'Covariance/'
@@ -266,6 +300,9 @@ def generate_output_repertories(Par,mode):
         makedirs(Par['folder_saving'],exist_ok=True)
         makedirs(Par['folder_job']   ,exist_ok=True)
         makedirs(Par['folder_sim']   ,exist_ok=True)
+        if Par['shell_mode']:
+            makedirs(Par['folder_delta_k2'],exist_ok=True)
+
         
         if Par['velocity']:
             makedirs(Par['folder_beta'],exist_ok=True)
@@ -458,6 +495,17 @@ def loading_ini_files(Par,mode):
         if Par['verbose'] and rank == 0 : print('computing and storing grid features',flush=True)
         Ary['grid_pos'] = sharing_array_throw_MPI((3,Par['N_sample']**3),intracomm,'float32')
         if intracomm.rank == 0: Ary['grid_pos'][:,:] = grid_positions(Par)
+         
+        if Par['shell_mode']:
+            Ary['shell_mask_grid'] = sharing_array_throw_MPI((Par['N_sample']**3,),intracomm,'int32')
+            if intracomm.rank == 0:
+                observer = np.array([Par['xo'],Par['yo'],Par['zo']],dtype=np.float32).reshape(3,1)
+                radial_grid = np.sqrt(np.sum((Ary['grid_pos'][:,:] - observer)**2,axis=0))
+                shell_pad = np.sqrt(3.) * Par['a']
+                Ary['shell_mask_grid'][:] = ((radial_grid >= Par['r_min'] - shell_pad) * (radial_grid <= Par['r_max'] + shell_pad)).astype(np.int32)
+        else:
+            Ary['shell_mask_grid'] = np.array([],dtype=np.int32)
+ 
         if Par['assign_scheme'] == 'trilinear': 
             Ary['vertex'] = sharing_array_throw_MPI((3,Par['N_sample']**3),intracomm,'int16')
             if intracomm.rank == 0: Ary['vertex'][:,:] = compute_vertex_indices(Par)
